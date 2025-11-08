@@ -23,7 +23,6 @@ export default function CreateHomeworkPage() {
     title: '',
     description: '',
     max_students: 10,
-    deadline: '',
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
@@ -83,7 +82,6 @@ export default function CreateHomeworkPage() {
         title: formData.title,
         description: formData.description,
         max_students: formData.max_students,
-        deadline: formData.deadline,
       });
 
       // Upload resource files if any
@@ -226,25 +224,6 @@ export default function CreateHomeworkPage() {
                 />
                 <p className="text-sm text-zinc-500 mt-2">
                   Maximum number of students who can enroll in this task
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="deadline">Deadline (Optional)</Label>
-                <Input
-                  id="deadline"
-                  type="datetime-local"
-                  value={formData.deadline}
-                  onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                  className="mt-2"
-                  disabled={profile.token_balance < 1}
-                />
-                <p className="text-sm text-zinc-500 mt-2">
-                  Deadline for students to submit their work. Leave empty for no deadline.
-                  <br />
-                  <span className="text-orange-600 dark:text-orange-400 text-xs">
-                    Note: Deadline features require database migration 005 to be applied.
-                  </span>
                 </p>
               </div>
 

@@ -12,7 +12,6 @@ import {
   getQuestions,
   enrollInHomework,
   checkMentorEligibility,
-  checkAndApplyDeadlinePenalties,
 } from '@/lib/supabase/queries';
 import type { HomeworkWithTeacher, EnrollmentWithDetails, Question } from '@/lib/types/database';
 import {
@@ -67,26 +66,6 @@ export default function StudentDashboard() {
         }
 
         setProfile(profileData);
-
-        // Check and apply deadline penalties
-        try {
-          const penaltiesApplied = await checkAndApplyDeadlinePenalties(profileData.id);
-          if (penaltiesApplied.length > 0) {
-            console.log('Penalties applied for missed deadlines:', penaltiesApplied);
-            // Reload profile to get updated token balance
-            const { data: updatedProfile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', profileData.id)
-              .single();
-            if (updatedProfile) {
-              setProfile(updatedProfile);
-            }
-          }
-        } catch (penaltyError) {
-          console.error('Error applying deadline penalties:', penaltyError);
-          // Don't block the dashboard if penalty check fails
-        }
 
         // Check mentor eligibility
         const eligible = await checkMentorEligibility(profileData.id);
@@ -250,14 +229,8 @@ export default function StudentDashboard() {
             <h2 className="text-2xl font-bold mb-4">My Enrollments</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {myEnrollments.map((enrollment) => {
-                const deadline = enrollment.homework?.deadline ? new Date(enrollment.homework.deadline) : null;
-                const now = new Date();
-                const hoursUntilDeadline = deadline ? (deadline.getTime() - now.getTime()) / (1000 * 60 * 60) : null;
-                const isDeadlineClose = hoursUntilDeadline !== null && hoursUntilDeadline > 0 && hoursUntilDeadline <= 24;
-                const isDeadlinePassed = hoursUntilDeadline !== null && hoursUntilDeadline <= 0;
-
                 return (
-                  <Card key={enrollment.id} className={`border-blue-500 ${isDeadlineClose ? 'border-orange-500' : ''} ${isDeadlinePassed ? 'border-red-500' : ''}`}>
+                  <Card key={enrollment.id} className="border-blue-500">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
@@ -267,24 +240,6 @@ export default function StudentDashboard() {
                           <CardDescription>
                             Teacher: {enrollment.homework?.teacher?.username || 'Unknown'}
                           </CardDescription>
-                          {deadline && (
-                            <div className="flex items-center gap-1 mt-2">
-                              {isDeadlinePassed ? (
-                                <AlertTriangle className="w-3 h-3 text-red-600" />
-                              ) : isDeadlineClose ? (
-                                <AlertTriangle className="w-3 h-3 text-orange-600" />
-                              ) : (
-                                <Clock className="w-3 h-3 text-zinc-500" />
-                              )}
-                              <span className={`text-xs font-semibold ${
-                                isDeadlinePassed ? 'text-red-600' : isDeadlineClose ? 'text-orange-600' : 'text-zinc-600'
-                              }`}>
-                                {deadline.toLocaleString()}
-                                {isDeadlinePassed && ' (Passed)'}
-                                {isDeadlineClose && !isDeadlinePassed && ' (Soon!)'}
-                              </span>
-                            </div>
-                          )}
                         </div>
                         <Badge
                           variant={

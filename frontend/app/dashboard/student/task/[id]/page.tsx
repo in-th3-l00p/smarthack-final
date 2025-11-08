@@ -112,7 +112,6 @@ export default function StudentTaskViewPage() {
     return null;
   }
 
-  const deadline = homework.deadline ? new Date(homework.deadline) : null;
   const slotsLeft = homework.max_students - homework.current_students;
 
   return (
@@ -135,14 +134,6 @@ export default function StudentTaskViewPage() {
               <p className="text-sm text-zinc-500 mt-2">
                 Teacher: {homework.teacher?.username || 'Unknown'}
               </p>
-              {deadline && (
-                <div className="flex items-center gap-2 mt-2">
-                  <Clock className="w-4 h-4 text-zinc-500" />
-                  <p className="text-sm font-semibold text-blue-600">
-                    Deadline: {deadline.toLocaleString()}
-                  </p>
-                </div>
-              )}
             </div>
             {isEnrolled && (
               <Badge variant="default" className="text-lg px-4 py-2 bg-green-600">
@@ -170,14 +161,6 @@ export default function StudentTaskViewPage() {
                   {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left
                 </Badge>
               </div>
-              {deadline && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-zinc-500" />
-                  <span className="text-sm">
-                    <strong>Deadline:</strong> {deadline.toLocaleString()}
-                  </span>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>

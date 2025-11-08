@@ -120,9 +120,7 @@ export async function createHomework(homework: {
   title: string;
   description?: string;
   max_students: number;
-  deadline?: string;
 }) {
-  // Prepare homework data, only include deadline if provided
   const homeworkData: any = {
     teacher_id: homework.teacher_id,
     title: homework.title,
@@ -131,11 +129,6 @@ export async function createHomework(homework: {
 
   if (homework.description) {
     homeworkData.description = homework.description;
-  }
-
-  // Only include deadline if it's provided and not empty
-  if (homework.deadline) {
-    homeworkData.deadline = homework.deadline;
   }
 
   const { data, error } = await supabase
@@ -708,50 +701,3 @@ export async function deleteTaskResource(resourceId: string) {
   if (error) throw error;
 }
 
-// ============================================
-// DEADLINE PENALTY CHECKER
-// ============================================
-
-/**
- * Check for missed deadlines and apply penalties
- * Call this when student dashboard loads
- */
-export async function checkAndApplyDeadlinePenalties(studentId: string) {
-  try {
-    // Get all active enrollments for this student
-    const enrollments = await getEnrollments({
-      studentId,
-      status: 'active'
-    });
-
-    const now = new Date();
-    const penaltiesApplied: string[] = [];
-
-    for (const enrollment of enrollments) {
-      if (!enrollment.homework?.deadline) continue;
-
-      const deadline = new Date(enrollment.homework.deadline);
-
-      // If deadline has passed
-      if (deadline < now) {
-        // Update enrollment status to 'missed'
-        await updateEnrollmentStatus(enrollment.id, 'missed');
-
-        // Deduct 20 tokens
-        await createTokenTransaction({
-          user_id: studentId,
-          amount: -20,
-          type: 'penalty',
-          description: `Penalty for missing deadline on: ${enrollment.homework.title}`,
-        });
-
-        penaltiesApplied.push(enrollment.homework.title);
-      }
-    }
-
-    return penaltiesApplied;
-  } catch (error) {
-    console.error('Error checking deadline penalties:', error);
-    throw error;
-  }
-}

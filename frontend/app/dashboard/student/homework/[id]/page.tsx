@@ -208,13 +208,6 @@ export default function StudentHomeworkPage() {
   const isCompleted = enrollment.status === 'completed';
   const isReviewed = enrollment.status === 'reviewed';
 
-  // Calculate time until deadline (if deadline exists)
-  const now = new Date();
-  const deadline = homework.deadline ? new Date(homework.deadline) : null;
-  const hoursUntilDeadline = deadline ? (deadline.getTime() - now.getTime()) / (1000 * 60 * 60) : Infinity;
-  const isDeadlineClose = deadline && hoursUntilDeadline > 0 && hoursUntilDeadline <= 24;
-  const isDeadlinePassed = deadline && hoursUntilDeadline <= 0;
-
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -235,18 +228,6 @@ export default function StudentHomeworkPage() {
               <p className="text-sm text-zinc-500 mt-2">
                 Teacher: {homework.teacher?.username || 'Unknown'}
               </p>
-              {deadline && (
-                <div className="flex items-center gap-2 mt-2">
-                  <Clock className="w-4 h-4 text-zinc-500" />
-                  <p className={`text-sm font-semibold ${
-                    isDeadlinePassed ? 'text-red-600' : isDeadlineClose ? 'text-orange-600' : 'text-blue-600'
-                  }`}>
-                    Deadline: {deadline.toLocaleString()}
-                    {isDeadlinePassed && ' (Passed)'}
-                    {isDeadlineClose && !isDeadlinePassed && ' (Less than 24h left!)'}
-                  </p>
-                </div>
-              )}
             </div>
             <Badge
               variant={
@@ -258,44 +239,6 @@ export default function StudentHomeworkPage() {
             </Badge>
           </div>
         </div>
-
-        {/* Deadline Warning */}
-        {isDeadlineClose && !isCompleted && !isReviewed && (
-          <Card className="mb-6 border-orange-500 bg-orange-50 dark:bg-orange-900/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-6 h-6 text-orange-600" />
-                <div>
-                  <p className="font-semibold text-orange-900 dark:text-orange-100">
-                    Deadline Approaching!
-                  </p>
-                  <p className="text-sm text-orange-700 dark:text-orange-200">
-                    You have less than 24 hours to submit your work. Submit soon to avoid penalty!
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Deadline Passed Warning */}
-        {isDeadlinePassed && !isCompleted && !isReviewed && (
-          <Card className="mb-6 border-red-500 bg-red-50 dark:bg-red-900/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
-                <div>
-                  <p className="font-semibold text-red-900 dark:text-red-100">
-                    Deadline Passed!
-                  </p>
-                  <p className="text-sm text-red-700 dark:text-red-200">
-                    The deadline for this task has passed. You will receive a penalty of -20 tokens.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Actions */}
         <div className="flex gap-4 mb-8">

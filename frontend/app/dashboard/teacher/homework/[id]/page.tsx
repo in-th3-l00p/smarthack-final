@@ -238,11 +238,6 @@ export default function HomeworkDetailPage() {
               <p className="text-zinc-600 dark:text-zinc-400">
                 {homework.description || 'No description provided'}
               </p>
-              {homework.deadline && (
-                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-2">
-                  Deadline: {new Date(homework.deadline).toLocaleString()}
-                </p>
-              )}
             </div>
             <Badge variant={homework.is_active ? 'default' : 'secondary'} className="text-lg px-4 py-2">
               {homework.is_active ? 'Active' : 'Inactive'}

@@ -37,7 +37,6 @@ export interface Homework {
   max_students: number;
   current_students: number;
   is_active: boolean;
-  deadline?: string; // Optional - requires migration 005
   created_at: string;
   // Joined data
   teacher?: Profile;
