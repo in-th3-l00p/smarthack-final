@@ -98,7 +98,8 @@ export interface Answer {
 export interface Review {
   id: string;
   reviewer_id: string;
-  student_id: string;
+  student_id?: string; // Optional - if reviewing a student
+  teacher_id?: string; // Optional - if reviewing a teacher
   homework_id: string;
   stars: number; // 1-5
   comment?: string;
@@ -106,6 +107,7 @@ export interface Review {
   // Joined data
   reviewer?: Profile;
   student?: Profile;
+  teacher?: Profile;
   homework?: Homework;
 }
 

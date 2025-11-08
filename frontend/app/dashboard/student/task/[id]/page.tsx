@@ -70,7 +70,9 @@ export default function StudentTaskViewPage() {
         setIsEnrolled(!!enrollmentData);
 
         // Load task resources
+        console.log('🔍 Loading resources for homework:', homeworkId);
         const resourcesData = await getTaskResources({ homeworkId });
+        console.log('📦 Resources loaded:', resourcesData);
         setTaskResources(resourcesData);
       } catch (error: any) {
         console.error('Error loading data:', error);

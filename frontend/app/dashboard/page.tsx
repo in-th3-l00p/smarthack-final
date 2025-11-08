@@ -18,12 +18,25 @@ export default function DashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
 
   useEffect(() => {
-    if (!isConnected) {
+    // Wait a bit for wallet to connect before redirecting
+    const timer = setTimeout(() => {
+      setInitialCheckDone(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Only redirect if we've waited and still not connected
+    if (initialCheckDone && !isConnected) {
       router.push('/');
       return;
     }
+
+    if (!isConnected || !address) return;
 
     async function loadProfile() {
       if (!address) return;
@@ -50,7 +63,7 @@ export default function DashboardPage() {
     }
 
     loadProfile();
-  }, [address, isConnected, router]);
+  }, [address, isConnected, router, initialCheckDone]);
 
   // Redirect based on role
   useEffect(() => {

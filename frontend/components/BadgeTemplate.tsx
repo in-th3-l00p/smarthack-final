@@ -184,16 +184,42 @@ export const BadgeTemplate: React.FC<BadgeTemplateProps> = ({
 export function detectSkillFromTitle(title: string): string {
   const titleLower = title.toLowerCase();
 
-  if (titleLower.includes('python') || titleLower.includes('py')) return 'Python';
-  if (titleLower.includes('javascript') || titleLower.includes('js') || titleLower.includes('react') || titleLower.includes('node')) return 'JavaScript';
-  if (titleLower.includes('math') || titleLower.includes('algebra') || titleLower.includes('calculus')) return 'Mathematics';
-  if (titleLower.includes('science') || titleLower.includes('physics') || titleLower.includes('chemistry') || titleLower.includes('biology')) return 'Science';
-  if (titleLower.includes('web') || titleLower.includes('html') || titleLower.includes('css')) return 'Web Development';
-  if (titleLower.includes('data') || titleLower.includes('analytics') || titleLower.includes('pandas')) return 'Data Science';
-  if (titleLower.includes('ai') || titleLower.includes('ml') || titleLower.includes('machine learning') || titleLower.includes('neural')) return 'AI/ML';
-  if (titleLower.includes('security') || titleLower.includes('cyber') || titleLower.includes('encryption')) return 'Cybersecurity';
-  if (titleLower.includes('mobile') || titleLower.includes('android') || titleLower.includes('ios') || titleLower.includes('app')) return 'Mobile Development';
-  if (titleLower.includes('blockchain') || titleLower.includes('web3') || titleLower.includes('crypto') || titleLower.includes('smart contract')) return 'Blockchain';
+  // Priority order: most specific to least specific
+  // Blockchain keywords
+  if (titleLower.match(/\b(blockchain|web3|crypto|cryptocurrency|smart\s*contract|solidity|ethereum|defi|nft)\b/)) return 'Blockchain';
+
+  // AI/ML keywords (specific phrases first)
+  if (titleLower.match(/\b(machine\s*learning|deep\s*learning|neural|tensorflow|pytorch|scikit|keras)\b/)) return 'AI/ML';
+
+  // Data Science keywords
+  if (titleLower.match(/\b(data\s*science|data\s*analytics?|pandas|numpy|matplotlib|tableau)\b/)) return 'Data Science';
+
+  // Mobile Development keywords
+  if (titleLower.match(/\b(mobile|android|ios|flutter|swift|kotlin|react\s*native)\b/)) return 'Mobile Development';
+
+  // Cybersecurity keywords
+  if (titleLower.match(/\b(security|cyber|encryption|penetration|hacking|firewall)\b/)) return 'Cybersecurity';
+
+  // Python keywords
+  if (titleLower.match(/\b(python|django|flask)\b/) || titleLower.includes('.py')) return 'Python';
+
+  // JavaScript keywords
+  if (titleLower.match(/\b(javascript|typescript|react|vue|angular|node\.?js|express)\b/) || titleLower.includes('.js') || titleLower.includes('.ts')) return 'JavaScript';
+
+  // Mathematics keywords
+  if (titleLower.match(/\b(math|algebra|calculus|geometry|trigonometry|statistics)\b/)) return 'Mathematics';
+
+  // Science keywords
+  if (titleLower.match(/\b(science|physics|chemistry|biology)\b/)) return 'Science';
+
+  // Web Development keywords
+  if (titleLower.match(/\b(web|html|css|frontend|backend|fullstack|responsive)\b/)) return 'Web Development';
+
+  // AI/ML shorter keywords (checked last)
+  if (titleLower.match(/\b(ai|ml)\b/)) return 'AI/ML';
+
+  // Data shorter keywords (checked last)
+  if (titleLower.match(/\b(data|analytics?)\b/)) return 'Data Science';
 
   // Default
   return 'Web Development';

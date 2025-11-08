@@ -30,7 +30,7 @@ Your application is currently **broken** because these database tables don't exi
    - Paste into SQL Editor
    - Click **Run**
 
-### 5. **Copy & Run Migration 006** (Storage Buckets + Cleanup) ⭐ NEW!
+### 5. **Copy & Run Migration 006** (Storage Buckets + Cleanup)
    - Open: `migrations/006_setup_storage_and_cleanup.sql`
    - Copy the entire contents
    - Paste into SQL Editor
@@ -41,9 +41,29 @@ Your application is currently **broken** because these database tables don't exi
      - ✅ Remove deadline column (no longer used)
      - ✅ Clean up enrollment statuses
 
+### 6. **Copy & Run Migration 007** (NFT Badges)
+   - Open: `migrations/007_add_badges.sql`
+   - Copy the entire contents
+   - Paste into SQL Editor
+   - Click **Run**
+   - This will:
+     - ✅ Create badges table for NFT achievements
+     - ✅ Set up policies for viewing and creating badges
+
+### 7. **Copy & Run Migration 008** (Teacher Reviews) ⭐ NEW!
+   - Open: `migrations/008_add_teacher_reviews.sql`
+   - Copy the entire contents
+   - Paste into SQL Editor
+   - Click **Run**
+   - This will:
+     - ✅ Add teacher_id column to reviews table
+     - ✅ Allow students to review teachers
+     - ✅ Update rating calculation for both students and teachers
+     - ✅ Add unique constraints for teacher reviews
+
 ---
 
-## 6. **Verify Everything Works**
+## 8. **Verify Everything Works**
 
 Run this query in SQL Editor to verify:
 
@@ -52,7 +72,7 @@ Run this query in SQL Editor to verify:
 SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
-AND table_name IN ('submissions', 'task_resources', 'homeworks', 'enrollments');
+AND table_name IN ('submissions', 'task_resources', 'homeworks', 'enrollments', 'badges', 'reviews');
 
 -- Check storage buckets exist
 SELECT id, name, public
@@ -64,12 +84,20 @@ SELECT column_name
 FROM information_schema.columns
 WHERE table_name = 'homeworks'
 AND column_name = 'deadline';
+
+-- Check reviews table has teacher_id column
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'reviews'
+AND column_name IN ('student_id', 'teacher_id')
+ORDER BY column_name;
 ```
 
 Expected results:
-- ✅ 4 tables found: submissions, task_resources, homeworks, enrollments
+- ✅ 6 tables found: submissions, task_resources, homeworks, enrollments, badges, reviews
 - ✅ 2 buckets found: submissions, task-resources
 - ✅ 0 rows for deadline column (it should be removed)
+- ✅ Both student_id and teacher_id columns exist in reviews table (both nullable)
 
 ---
 
@@ -83,6 +111,11 @@ Expected results:
    - Sets up all storage policies
    - Removes deadline functionality
    - Cleans up enrollment statuses
+5. ✅ **007**: Creates `badges` table for NFT achievements
+6. ✅ **008**:
+   - Adds teacher_id to reviews table
+   - Enables students to review teachers
+   - Updates rating triggers for both students and teachers
 
 ---
 

@@ -15,9 +15,12 @@ import {
   getTaskResources,
   getReviews,
   getBadges,
+  deleteSubmission,
+  updateEnrollmentStatus,
+  createReview,
 } from '@/lib/supabase/queries';
 import type { Homework, EnrollmentWithDetails, Submission, TaskResource } from '@/lib/types/database';
-import { Upload, FileText, CheckCircle, MessageCircle, Loader2, ArrowLeft, Download } from 'lucide-react';
+import { Upload, FileText, CheckCircle, MessageCircle, Loader2, ArrowLeft, Download, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -45,6 +48,12 @@ export default function StudentHomeworkPage() {
   // Badge modal state
   const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [canMintBadge, setCanMintBadge] = useState(false);
+
+  // Teacher review state
+  const [teacherReviewStars, setTeacherReviewStars] = useState(0);
+  const [teacherReviewComment, setTeacherReviewComment] = useState('');
+  const [hasReviewedTeacher, setHasReviewedTeacher] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (!isConnected) {
@@ -106,9 +115,11 @@ export default function StudentHomeworkPage() {
         setSubmissions(submissionsData);
 
         // Load task resources from teacher
+        console.log('🔍 Loading resources for homework:', homeworkId);
         const resourcesData = await getTaskResources({
           homeworkId,
         });
+        console.log('📦 Resources loaded:', resourcesData);
         setTaskResources(resourcesData);
 
         // Check if student can mint a badge (5-star review + no badge yet)
@@ -151,6 +162,19 @@ export default function StudentHomeworkPage() {
           }
         } else {
           console.log('⚠️ Enrollment not reviewed yet or no enrollments');
+        }
+
+        // Check if student has already reviewed the teacher
+        if (homeworkData?.teacher_id && profileData?.id) {
+          const teacherReviews = await getReviews({
+            homeworkId,
+          });
+          const existingTeacherReview = teacherReviews.find(
+            r => r.reviewer_id === profileData.id && r.teacher_id === homeworkData.teacher_id
+          );
+          if (existingTeacherReview) {
+            setHasReviewedTeacher(true);
+          }
         }
       } catch (error: any) {
         console.error('Error loading data:', error);
@@ -269,7 +293,7 @@ export default function StudentHomeworkPage() {
         } else {
           console.log('✅ Enrollment updated successfully:', updatedEnrollment);
           // Update local enrollment state with the actual data from DB
-          setEnrollment({ ...enrollment, status: updatedEnrollment.status, completed_at: updatedEnrollment.completed_at });
+          setEnrollment(updatedEnrollment);
         }
       }
 
@@ -284,12 +308,81 @@ export default function StudentHomeworkPage() {
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
-      alert(`✅ File uploaded successfully!\n\n${uploadedFile.name}\n\nYour teacher will be able to see this file when reviewing your submission.`);
+      alert(`✅ File uploaded successfully!\n\n${uploadedFile.name}\n\nYour submission is now complete. You can withdraw it before the teacher reviews it using the "Withdraw Submission" button above.`);
     } catch (error: any) {
       console.error('Unexpected error uploading file:', error);
       alert(`❌ Unexpected error uploading file.\n\nFile: ${uploadedFile.name}\nPlease try again or contact your teacher if the problem persists.`);
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleUnsubmit() {
+    if (!enrollment || !submissions.length) return;
+
+    const confirmed = confirm(
+      'Are you sure you want to withdraw your submission? This will delete all your uploaded files and you can submit again.'
+    );
+
+    if (!confirmed) return;
+
+    setUploading(true);
+    try {
+      // Delete all submissions
+      for (const submission of submissions) {
+        // Delete from storage
+        const fileName = submission.file_url.split('/').pop();
+        if (fileName) {
+          const storagePath = `${profile?.id}/${enrollment.id}/${fileName}`;
+          await supabase.storage.from('submissions').remove([storagePath]);
+        }
+
+        // Delete submission record
+        await deleteSubmission(submission.id);
+      }
+
+      // Update enrollment status back to active
+      await updateEnrollmentStatus(enrollment.id, 'active');
+
+      // Refresh data
+      const enrollmentsData = await getEnrollments({
+        studentId: profile?.id,
+        homeworkId: homeworkId,
+      });
+      if (enrollmentsData.length > 0) {
+        setEnrollment(enrollmentsData[0]);
+      }
+
+      setSubmissions([]);
+      alert('✅ Submission withdrawn successfully! You can now submit again.');
+    } catch (error) {
+      console.error('Error withdrawing submission:', error);
+      alert('❌ Error withdrawing submission. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleSubmitTeacherReview() {
+    if (!profile || !homework || teacherReviewStars === 0) return;
+
+    setSubmittingReview(true);
+    try {
+      await createReview({
+        reviewer_id: profile.id,
+        teacher_id: homework.teacher_id,
+        homework_id: homeworkId,
+        stars: teacherReviewStars,
+        comment: teacherReviewComment.trim() || undefined,
+      });
+
+      setHasReviewedTeacher(true);
+      alert(`✅ Review submitted! You gave ${teacherReviewStars} star${teacherReviewStars !== 1 ? 's' : ''} to your teacher.`);
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('❌ Error submitting review. Please try again.');
+    } finally {
+      setSubmittingReview(false);
     }
   }
 
@@ -304,6 +397,12 @@ export default function StudentHomeworkPage() {
   const canSubmit = enrollment.status === 'active';
   const isCompleted = enrollment.status === 'completed';
   const isReviewed = enrollment.status === 'reviewed';
+
+  // Debug logging
+  console.log('🔍 Enrollment status:', enrollment.status);
+  console.log('🔍 isCompleted:', isCompleted);
+  console.log('🔍 isReviewed:', isReviewed);
+  console.log('🔍 submissions.length:', submissions.length);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -345,6 +444,27 @@ export default function StudentHomeworkPage() {
               Ask Questions
             </Button>
           </Link>
+
+          {isCompleted && !isReviewed && submissions.length > 0 && (
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={handleUnsubmit}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Withdrawing...
+                </>
+              ) : (
+                <>
+                  <X className="w-4 h-4 mr-2" />
+                  Withdraw Submission
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Review Score (if reviewed) */}
@@ -446,7 +566,20 @@ export default function StudentHomeworkPage() {
               {/* Uploaded Files List */}
               {submissions.length > 0 && (
                 <div className="border rounded-lg p-4 space-y-2">
-                  <h3 className="font-semibold text-sm mb-3">Uploaded Files:</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-sm">Uploaded Files:</h3>
+                    {isCompleted && !isReviewed && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handleUnsubmit}
+                        disabled={uploading}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Withdraw Submission
+                      </Button>
+                    )}
+                  </div>
                   {submissions.map((submission) => (
                     <div
                       key={submission.id}
@@ -526,16 +659,117 @@ export default function StudentHomeworkPage() {
                 </Button>
               )}
               {isCompleted && (
-                <div className="flex items-center justify-center gap-2 text-green-600">
-                  <CheckCircle className="w-5 h-5" />
-                  <p className="font-semibold">
-                    Submitted on {enrollment.completed_at ? new Date(enrollment.completed_at).toLocaleDateString() : 'N/A'}
-                  </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-green-600">
+                    <CheckCircle className="w-5 h-5" />
+                    <p className="font-semibold">
+                      Submitted on {enrollment.completed_at ? new Date(enrollment.completed_at).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  {isReviewed && enrollment.review_score && (
+                    <div className="flex flex-col items-center gap-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Teacher's Rating:</p>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <span
+                            key={i}
+                            className={`text-2xl ${
+                              i < enrollment.review_score! ? 'text-yellow-500' : 'text-gray-300'
+                            }`}
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-lg font-bold text-blue-600">{enrollment.review_score} / 5 stars</p>
+                      {enrollment.review_comment && (
+                        <div className="mt-2 w-full">
+                          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">Comment:</p>
+                          <p className="text-sm text-zinc-700 dark:text-zinc-300 italic">"{enrollment.review_comment}"</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
+
+        {/* Rate Your Teacher */}
+        {isReviewed && !hasReviewedTeacher && homework?.teacher && (
+          <Card className="border-purple-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-purple-600" />
+                Rate Your Teacher
+              </CardTitle>
+              <CardDescription>
+                Share your experience with {homework.teacher.username}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold mb-2">How many stars?</p>
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setTeacherReviewStars(star)}
+                        className={`text-4xl transition-colors ${
+                          star <= teacherReviewStars ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'
+                        }`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                  {teacherReviewStars > 0 && (
+                    <p className="text-sm text-purple-600 mt-2">{teacherReviewStars} star{teacherReviewStars !== 1 ? 's' : ''} selected</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold mb-2">Comment (optional)</p>
+                  <Textarea
+                    value={teacherReviewComment}
+                    onChange={(e) => setTeacherReviewComment(e.target.value)}
+                    placeholder="Share your thoughts about the teacher's guidance and feedback..."
+                    rows={4}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSubmitTeacherReview}
+                  disabled={teacherReviewStars === 0 || submittingReview}
+                  className="w-full"
+                  size="lg"
+                >
+                  {submittingReview ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Review'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {hasReviewedTeacher && (
+          <Card className="border-green-500">
+            <CardContent className="py-6">
+              <div className="flex items-center justify-center gap-2 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+                <p className="font-semibold">You have already reviewed your teacher. Thank you for your feedback!</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Badge Minting Modal */}

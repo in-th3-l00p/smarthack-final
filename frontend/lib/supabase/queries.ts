@@ -359,7 +359,8 @@ export async function getReviews(filters?: {
 
 export async function createReview(review: {
   reviewer_id: string;
-  student_id: string;
+  student_id?: string;
+  teacher_id?: string;
   homework_id: string;
   stars: number;
   comment?: string;
@@ -619,6 +620,15 @@ export async function updateSubmissionStatus(
   return data as Submission;
 }
 
+export async function deleteSubmission(submissionId: string) {
+  const { error } = await supabase
+    .from('submissions')
+    .delete()
+    .eq('id', submissionId);
+
+  if (error) throw error;
+}
+
 // Get unreviewed submissions for a teacher's homeworks
 export async function getUnreviewedSubmissions(teacherId: string) {
   const { data, error } = await supabase
@@ -645,11 +655,13 @@ export async function getTaskResources(filters?: {
   teacherId?: string;
 }) {
   try {
+    console.log('📥 getTaskResources called with filters:', filters);
+
     let query = supabase
       .from('task_resources')
       .select(`
         *,
-        homework:homeworks(*),
+        homework:homeworks!task_resources_homework_id_fkey(*),
         teacher:profiles!task_resources_teacher_id_fkey(*)
       `)
       .order('uploaded_at', { ascending: false });
@@ -663,13 +675,25 @@ export async function getTaskResources(filters?: {
 
     const { data, error } = await query;
 
+    console.log('📥 Query result - Data:', data, 'Error:', error);
+
     // If table doesn't exist yet, return empty array
     if (error && error.code === '42P01') {
       console.warn('task_resources table does not exist yet. Please run migration 005.');
       return [];
     }
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Error in getTaskResources query:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      throw error;
+    }
+
+    console.log('✅ Returning', data?.length || 0, 'resources');
     return data as TaskResourceWithDetails[];
   } catch (error) {
     console.error('Error fetching task resources:', error);

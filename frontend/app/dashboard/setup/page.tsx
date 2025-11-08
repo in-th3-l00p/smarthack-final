@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-
 export const dynamic = 'force-dynamic';
+
+import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

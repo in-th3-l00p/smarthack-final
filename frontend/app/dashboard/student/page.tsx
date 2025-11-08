@@ -221,6 +221,28 @@ export default function StudentDashboard() {
           </Card>
         </div>
 
+        {/* NFT Achievements Card */}
+        <Card className="mb-8 border-purple-500">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-purple-600" />
+                  NFT Achievements
+                </CardTitle>
+                <CardDescription>
+                  View your collection of achievement badges earned from completed tasks
+                </CardDescription>
+              </div>
+              <Link href="/dashboard/student/achievements">
+                <Button>
+                  View All Achievements
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+        </Card>
+
         {/* My Enrollments */}
         {myEnrollments.length > 0 && (
           <div className="mb-8">
