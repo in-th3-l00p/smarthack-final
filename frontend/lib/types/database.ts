@@ -3,9 +3,9 @@
 // ============================================
 
 export type UserRole = 'student' | 'teacher';
-export type EnrollmentStatus = 'active' | 'completed' | 'reviewed';
+export type EnrollmentStatus = 'active' | 'completed' | 'reviewed' | 'missed';
 export type VoteType = 'upvote' | 'downvote';
-export type TransactionType = 'earned' | 'spent' | 'initial' | 'mentor_reward';
+export type TransactionType = 'earned' | 'spent' | 'initial' | 'mentor_reward' | 'penalty';
 export type SubmissionStatus = 'submitted' | 'reviewed';
 
 // ============================================
@@ -37,6 +37,7 @@ export interface Homework {
   max_students: number;
   current_students: number;
   is_active: boolean;
+  deadline: string;
   created_at: string;
   // Joined data
   teacher?: Profile;
@@ -51,6 +52,10 @@ export interface Enrollment {
   homework_id: string;
   status: EnrollmentStatus;
   enrolled_at: string;
+  submission_text?: string;
+  completed_at?: string;
+  review_score?: number;
+  review_comment?: string;
   // Joined data
   student?: Profile;
   homework?: Homework;
@@ -155,6 +160,22 @@ export interface Submission {
 }
 
 // ============================================
+// TASK RESOURCE (Teacher Resource Upload)
+// ============================================
+export interface TaskResource {
+  id: string;
+  homework_id: string;
+  teacher_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  uploaded_at: string;
+  // Joined data
+  homework?: Homework;
+  teacher?: Profile;
+}
+
+// ============================================
 // HELPER TYPES
 // ============================================
 
@@ -177,4 +198,9 @@ export interface SubmissionWithDetails extends Submission {
   student: Profile;
   homework: Homework;
   enrollment: Enrollment;
+}
+
+export interface TaskResourceWithDetails extends TaskResource {
+  homework: Homework;
+  teacher: Profile;
 }

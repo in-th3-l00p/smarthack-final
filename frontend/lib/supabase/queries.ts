@@ -9,10 +9,12 @@ import type {
   Vote,
   TokenTransaction,
   Submission,
+  TaskResource,
   HomeworkWithTeacher,
   QuestionWithDetails,
   EnrollmentWithDetails,
   SubmissionWithDetails,
+  TaskResourceWithDetails,
 } from '@/lib/types/database';
 
 const supabase = createSupabaseBrowserClient();
@@ -118,15 +120,19 @@ export async function createHomework(homework: {
   title: string;
   description?: string;
   max_students: number;
+  deadline: string;
 }) {
   const { data, error } = await supabase
     .from('homeworks')
     .insert([homework])
-    .select()
+    .select(`
+      *,
+      teacher:profiles!homeworks_teacher_id_fkey(*)
+    `)
     .single();
 
   if (error) throw error;
-  return data as Homework;
+  return data as HomeworkWithTeacher;
 }
 
 export async function updateHomework(homeworkId: string, updates: Partial<Homework>) {
@@ -139,6 +145,15 @@ export async function updateHomework(homeworkId: string, updates: Partial<Homewo
 
   if (error) throw error;
   return data as Homework;
+}
+
+export async function deleteHomework(homeworkId: string) {
+  const { error } = await supabase
+    .from('homeworks')
+    .delete()
+    .eq('id', homeworkId);
+
+  if (error) throw error;
 }
 
 // ============================================
@@ -194,7 +209,7 @@ export async function enrollInHomework(studentId: string, homeworkId: string) {
 
 export async function updateEnrollmentStatus(
   enrollmentId: string,
-  status: 'active' | 'completed' | 'reviewed'
+  status: 'active' | 'completed' | 'reviewed' | 'missed'
 ) {
   const { data, error } = await supabase
     .from('enrollments')
@@ -435,7 +450,7 @@ export async function getTokenTransactions(userId: string) {
 export async function createTokenTransaction(transaction: {
   user_id: string;
   amount: number;
-  type: 'earned' | 'spent' | 'initial' | 'mentor_reward';
+  type: 'earned' | 'spent' | 'initial' | 'mentor_reward' | 'penalty';
   description?: string;
 }) {
   const { data, error } = await supabase
@@ -593,4 +608,107 @@ export async function getUnreviewedSubmissions(teacherId: string) {
 
   if (error) throw error;
   return data as SubmissionWithDetails[];
+}
+
+// ============================================
+// TASK RESOURCE QUERIES (Teacher Resources)
+// ============================================
+
+export async function getTaskResources(filters?: {
+  homeworkId?: string;
+  teacherId?: string;
+}) {
+  let query = supabase
+    .from('task_resources')
+    .select(`
+      *,
+      homework:homeworks(*),
+      teacher:profiles!task_resources_teacher_id_fkey(*)
+    `)
+    .order('uploaded_at', { ascending: false });
+
+  if (filters?.homeworkId) {
+    query = query.eq('homework_id', filters.homeworkId);
+  }
+  if (filters?.teacherId) {
+    query = query.eq('teacher_id', filters.teacherId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as TaskResourceWithDetails[];
+}
+
+export async function createTaskResource(resource: {
+  homework_id: string;
+  teacher_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+}) {
+  const { data, error } = await supabase
+    .from('task_resources')
+    .insert([resource])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as TaskResource;
+}
+
+export async function deleteTaskResource(resourceId: string) {
+  const { error } = await supabase
+    .from('task_resources')
+    .delete()
+    .eq('id', resourceId);
+
+  if (error) throw error;
+}
+
+// ============================================
+// DEADLINE PENALTY CHECKER
+// ============================================
+
+/**
+ * Check for missed deadlines and apply penalties
+ * Call this when student dashboard loads
+ */
+export async function checkAndApplyDeadlinePenalties(studentId: string) {
+  try {
+    // Get all active enrollments for this student
+    const enrollments = await getEnrollments({
+      studentId,
+      status: 'active'
+    });
+
+    const now = new Date();
+    const penaltiesApplied: string[] = [];
+
+    for (const enrollment of enrollments) {
+      if (!enrollment.homework?.deadline) continue;
+
+      const deadline = new Date(enrollment.homework.deadline);
+
+      // If deadline has passed
+      if (deadline < now) {
+        // Update enrollment status to 'missed'
+        await updateEnrollmentStatus(enrollment.id, 'missed');
+
+        // Deduct 20 tokens
+        await createTokenTransaction({
+          user_id: studentId,
+          amount: -20,
+          type: 'penalty',
+          description: `Penalty for missing deadline on: ${enrollment.homework.title}`,
+        });
+
+        penaltiesApplied.push(enrollment.homework.title);
+      }
+    }
+
+    return penaltiesApplied;
+  } catch (error) {
+    console.error('Error checking deadline penalties:', error);
+    throw error;
+  }
 }
