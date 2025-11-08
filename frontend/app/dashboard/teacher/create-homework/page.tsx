@@ -230,18 +230,21 @@ export default function CreateHomeworkPage() {
               </div>
 
               <div>
-                <Label htmlFor="deadline">Deadline *</Label>
+                <Label htmlFor="deadline">Deadline (Optional)</Label>
                 <Input
                   id="deadline"
                   type="datetime-local"
-                  required
                   value={formData.deadline}
                   onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
                   className="mt-2"
                   disabled={profile.token_balance < 1}
                 />
                 <p className="text-sm text-zinc-500 mt-2">
-                  Deadline for students to submit their work
+                  Deadline for students to submit their work. Leave empty for no deadline.
+                  <br />
+                  <span className="text-orange-600 dark:text-orange-400 text-xs">
+                    Note: Deadline features require database migration 005 to be applied.
+                  </span>
                 </p>
               </div>
 

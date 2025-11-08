@@ -120,11 +120,27 @@ export async function createHomework(homework: {
   title: string;
   description?: string;
   max_students: number;
-  deadline: string;
+  deadline?: string;
 }) {
+  // Prepare homework data, only include deadline if provided
+  const homeworkData: any = {
+    teacher_id: homework.teacher_id,
+    title: homework.title,
+    max_students: homework.max_students,
+  };
+
+  if (homework.description) {
+    homeworkData.description = homework.description;
+  }
+
+  // Only include deadline if it's provided and not empty
+  if (homework.deadline) {
+    homeworkData.deadline = homework.deadline;
+  }
+
   const { data, error } = await supabase
     .from('homeworks')
-    .insert([homework])
+    .insert([homeworkData])
     .select(`
       *,
       teacher:profiles!homeworks_teacher_id_fkey(*)
