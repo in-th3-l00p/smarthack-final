@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, Trash2, Eye, Shield, Info } from 'lucide-react';
-import { createSupabaseClient } from '@/lib/supabase/client';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
-const supabase = createSupabaseClient();
+const supabase = createSupabaseBrowserClient();
 
 interface DataPrivacyPanelProps {
   userId: string;

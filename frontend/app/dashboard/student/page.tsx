@@ -2,54 +2,83 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TaskCard } from '@/components/TaskCard';
-import { getTasks, getRecommendedTasks, createRecommendationExplanation } from '@/lib/supabase/queries';
-import type { Task, Profile } from '@/lib/types/database';
-import { BookOpen, Trophy, TrendingUp, Coins, Lightbulb, Filter } from 'lucide-react';
-import { createSupabaseClient } from '@/lib/supabase/client';
+import {
+  getAvailableHomeworks,
+  getEnrollments,
+  getQuestions,
+  enrollInHomework,
+  checkMentorEligibility,
+} from '@/lib/supabase/queries';
+import type { HomeworkWithTeacher, EnrollmentWithDetails, Question } from '@/lib/types/database';
+import {
+  BookOpen,
+  Users,
+  Star,
+  Coins,
+  Trophy,
+  MessageCircle,
+  CheckCircle,
+  Award,
+} from 'lucide-react';
+import Link from 'next/link';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
-const supabase = createSupabaseClient();
+const supabase = createSupabaseBrowserClient();
 
 export default function StudentDashboard() {
-  const { address } = useAccount();
-  const [recommendedTasks, setRecommendedTasks] = useState<Task[]>([]);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { address, isConnected } = useAccount();
+  const router = useRouter();
+  const [profile, setProfile] = useState<any>(null);
+  const [availableHomeworks, setAvailableHomeworks] = useState<HomeworkWithTeacher[]>([]);
+  const [myEnrollments, setMyEnrollments] = useState<EnrollmentWithDetails[]>([]);
+  const [myQuestions, setMyQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
+  const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [canBecomeMentor, setCanBecomeMentor] = useState(false);
 
   useEffect(() => {
+    if (!isConnected) {
+      router.push('/');
+      return;
+    }
+
     async function loadData() {
       if (!address) return;
 
       try {
         // Load profile
-        const { data: profiles } = await supabase
+        const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('wallet_address', address.toLowerCase())
           .single();
 
-        if (profiles) {
-          setProfile(profiles);
-
-          // Load recommended tasks
-          const recommended = await getRecommendedTasks(profiles.id);
-          setRecommendedTasks(recommended);
-
-          // Generate explanations for recommended tasks
-          for (const task of recommended.slice(0, 3)) {
-            await generateRecommendationExplanation(profiles.id, task);
-          }
-
-          // Load all tasks
-          const tasksData = await getTasks({ status: 'active' });
-          setAllTasks(tasksData);
+        if (!profileData || profileData.role !== 'student') {
+          router.push('/dashboard');
+          return;
         }
+
+        setProfile(profileData);
+
+        // Check mentor eligibility
+        const eligible = await checkMentorEligibility(profileData.id);
+        setCanBecomeMentor(eligible && !profileData.is_mentor);
+
+        // Load available homeworks
+        const homeworksData = await getAvailableHomeworks();
+        setAvailableHomeworks(homeworksData);
+
+        // Load my enrollments
+        const enrollmentsData = await getEnrollments({ studentId: profileData.id });
+        setMyEnrollments(enrollmentsData);
+
+        // Load my questions
+        const questionsData = await getQuestions({ studentId: profileData.id });
+        setMyQuestions(questionsData);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -58,226 +87,280 @@ export default function StudentDashboard() {
     }
 
     loadData();
-  }, [address]);
+  }, [address, isConnected, router]);
 
-  async function generateRecommendationExplanation(userId: string, task: Task) {
-    // Simple recommendation logic - in production, use a more sophisticated algorithm
-    const factors: Record<string, any> = {};
-    let explanation = `This task was recommended because: `;
-    const reasons: string[] = [];
+  async function handleEnroll(homeworkId: string) {
+    if (!profile) return;
 
-    // Factor 1: Difficulty matches user level
-    if (profile) {
-      const userLevel = profile.total_tasks_completed < 5 ? 'beginner'
-        : profile.total_tasks_completed < 20 ? 'intermediate'
-        : 'advanced';
-
-      if (task.difficulty === userLevel) {
-        reasons.push(`it matches your current skill level (${userLevel})`);
-        factors.difficulty_match = true;
-      }
-    }
-
-    // Factor 2: High success rate
-    const successRate = task.total_attempts > 0
-      ? (task.successful_completions / task.total_attempts) * 100
-      : 0;
-
-    if (successRate > 60) {
-      reasons.push(`it has a good success rate (${successRate.toFixed(0)}%)`);
-      factors.high_success_rate = successRate;
-    }
-
-    // Factor 3: Good reward to stake ratio
-    const rewardRatio = task.reward_amount / task.student_stake_required;
-    if (rewardRatio > 1.5) {
-      reasons.push(`it offers a favorable reward ratio (${rewardRatio.toFixed(1)}x)`);
-      factors.good_reward_ratio = rewardRatio;
-    }
-
-    // Factor 4: Reputable teacher
-    if (task.teacher && task.teacher.reputation_score > 50) {
-      reasons.push(`the teacher has a strong reputation (${task.teacher.reputation_score})`);
-      factors.reputable_teacher = task.teacher.reputation_score;
-    }
-
-    explanation += reasons.join(', ') + '.';
-
+    setEnrolling(homeworkId);
     try {
-      await createRecommendationExplanation({
-        user_id: userId,
-        task_id: task.id,
-        explanation,
-        relevance_score: reasons.length * 25, // Simple scoring
-        factors,
-      });
-    } catch (error) {
-      console.error('Error creating recommendation explanation:', error);
+      await enrollInHomework(profile.id, homeworkId);
+
+      // Refresh data
+      const enrollmentsData = await getEnrollments({ studentId: profile.id });
+      setMyEnrollments(enrollmentsData);
+
+      const homeworksData = await getAvailableHomeworks();
+      setAvailableHomeworks(homeworksData);
+
+      alert('Enrolled successfully! ✅');
+    } catch (error: any) {
+      console.error('Error enrolling:', error);
+      if (error.message?.includes('duplicate')) {
+        alert('You are already enrolled in this homework!');
+      } else {
+        alert('Error enrolling. Please try again.');
+      }
+    } finally {
+      setEnrolling(null);
     }
   }
-
-  const handleStake = async (taskId: string) => {
-    // This would integrate with the smart contract
-    console.log('Staking for task:', taskId);
-    // Navigate to task detail page
-    window.location.href = `/tasks/${taskId}`;
-  };
-
-  // Filter tasks
-  const filteredTasks = allTasks.filter(task => {
-    if (selectedCategory && task.category !== selectedCategory) return false;
-    if (selectedDifficulty && task.difficulty !== selectedDifficulty) return false;
-    return true;
-  });
-
-  const categories = Array.from(new Set(allTasks.map(t => t.category)));
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
+  if (!profile) {
+    return null;
+  }
+
+  const unansweredQuestions = myQuestions.filter(q => !q.is_answered).length;
+
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Student Dashboard</h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Discover tasks, learn, and earn rewards through your achievements
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tasks Completed</CardTitle>
-            <Trophy className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{profile?.total_tasks_completed || 0}</div>
-            <p className="text-xs text-zinc-500">
-              {profile?.total_tasks_attempted || 0} attempted
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {profile?.total_tasks_attempted
-                ? Math.round((profile.total_tasks_completed / profile.total_tasks_attempted) * 100)
-                : 0}%
-            </div>
-            <p className="text-xs text-zinc-500">Keep it up!</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reputation</CardTitle>
-            <BookOpen className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{profile?.reputation_score || 0}</div>
-            <p className="text-xs text-zinc-500">Based on participation</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available Tasks</CardTitle>
-            <Coins className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{allTasks.length}</div>
-            <p className="text-xs text-zinc-500">{recommendedTasks.length} recommended</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recommended Tasks */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="w-6 h-6 text-yellow-500" />
-          <h2 className="text-2xl font-bold">Recommended For You</h2>
-          <Badge variant="secondary">AI-Powered</Badge>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">Student Dashboard</h1>
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Browse homeworks, ask questions, and learn!
+          </p>
         </div>
-        <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-          These tasks are personalized based on your skills and interests. Click on any task to see why it was recommended.
-        </p>
-        {recommendedTasks.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-zinc-600">
-              No recommendations available yet. Complete some tasks to get personalized suggestions!
+
+        {/* Mentor Eligibility Banner */}
+        {canBecomeMentor && (
+          <Card className="mb-6 border-purple-500 bg-purple-50 dark:bg-purple-900/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Trophy className="w-6 h-6 text-purple-600" />
+                  <div>
+                    <p className="font-semibold text-purple-900 dark:text-purple-100">
+                      🎉 You're eligible to become a Mentor!
+                    </p>
+                    <p className="text-sm text-purple-700 dark:text-purple-200">
+                      You have {profile.rating.toFixed(1)}+ stars and {profile.completed_count}+
+                      completed homeworks
+                    </p>
+                  </div>
+                </div>
+                <Link href="/dashboard/student/become-mentor">
+                  <Button className="bg-purple-600 hover:bg-purple-700">
+                    <Award className="w-4 h-4 mr-2" />
+                    Become a Mentor
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recommendedTasks.slice(0, 6).map((task) => (
-              <TaskCard key={task.id} task={task} onStake={handleStake} />
-            ))}
+        )}
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">My Enrollments</CardTitle>
+              <BookOpen className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{myEnrollments.length}</div>
+              <p className="text-xs text-zinc-500">active homeworks</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{profile.completed_count}</div>
+              <p className="text-xs text-zinc-500">homeworks finished</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">My Rating</CardTitle>
+              <Star className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{profile.rating.toFixed(1)}/5</div>
+              <p className="text-xs text-zinc-500">
+                {profile.total_reviews} {profile.total_reviews === 1 ? 'review' : 'reviews'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {profile.is_mentor ? 'Token Balance' : 'Questions'}
+              </CardTitle>
+              {profile.is_mentor ? (
+                <Coins className="h-4 w-4 text-yellow-600" />
+              ) : (
+                <MessageCircle className="h-4 w-4 text-purple-600" />
+              )}
+            </CardHeader>
+            <CardContent>
+              {profile.is_mentor ? (
+                <>
+                  <div className="text-2xl font-bold">{profile.token_balance}</div>
+                  <p className="text-xs text-zinc-500">tokens earned</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{unansweredQuestions}</div>
+                  <p className="text-xs text-zinc-500">pending answers</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* My Enrollments */}
+        {myEnrollments.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">My Enrollments</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {myEnrollments.map((enrollment) => (
+                <Card key={enrollment.id} className="border-blue-500">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">
+                          {enrollment.homework?.title}
+                        </CardTitle>
+                        <CardDescription>
+                          Teacher: {enrollment.homework?.teacher?.username || 'Unknown'}
+                        </CardDescription>
+                      </div>
+                      <Badge
+                        variant={
+                          enrollment.status === 'reviewed'
+                            ? 'default'
+                            : enrollment.status === 'completed'
+                            ? 'secondary'
+                            : 'outline'
+                        }
+                      >
+                        {enrollment.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-zinc-600 mb-4 line-clamp-2">
+                      {enrollment.homework?.description || 'No description'}
+                    </p>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/dashboard/student/homework/${enrollment.homework_id}`}
+                        className="flex-1"
+                      >
+                        <Button variant="outline" size="sm" className="w-full">
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Ask Question
+                        </Button>
+                      </Link>
+                      <Link
+                        href={`/dashboard/student/homework/${enrollment.homework_id}/questions`}
+                        className="flex-1"
+                      >
+                        <Button variant="default" size="sm" className="w-full">
+                          View Questions
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
-      </div>
 
-      {/* All Tasks with Filters */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">Browse All Tasks</h2>
-          <div className="flex gap-2">
-            <Filter className="w-5 h-5 text-zinc-600" />
-          </div>
-        </div>
+        {/* Available Homeworks */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Available Homeworks</h2>
+          {availableHomeworks.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <BookOpen className="w-12 h-12 text-zinc-400 mb-4" />
+                <p className="text-zinc-600">No homeworks available at the moment</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {availableHomeworks.map((homework) => {
+                const isEnrolled = myEnrollments.some(
+                  (e) => e.homework_id === homework.id
+                );
+                const slotsLeft = homework.max_students - homework.current_students;
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <Button
-            variant={selectedCategory === null ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedCategory(null)}
-          >
-            All Categories
-          </Button>
-          {categories.map(category => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category}
-            </Button>
-          ))}
-
-          <div className="w-px bg-zinc-200 mx-2" />
-
-          <Button
-            variant={selectedDifficulty === null ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedDifficulty(null)}
-          >
-            All Levels
-          </Button>
-          {['beginner', 'intermediate', 'advanced'].map(level => (
-            <Button
-              key={level}
-              variant={selectedDifficulty === level ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedDifficulty(level)}
-            >
-              {level}
-            </Button>
-          ))}
-        </div>
-
-        {/* Tasks Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onStake={handleStake} />
-          ))}
+                return (
+                  <Card
+                    key={homework.id}
+                    className={isEnrolled ? 'border-green-500' : 'hover:border-blue-500'}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-lg">{homework.title}</CardTitle>
+                        {isEnrolled && (
+                          <Badge variant="default" className="bg-green-600">
+                            Enrolled
+                          </Badge>
+                        )}
+                      </div>
+                      <CardDescription>
+                        Teacher: {homework.teacher.username || 'Unknown'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-zinc-600 mb-4 line-clamp-3">
+                        {homework.description || 'No description provided'}
+                      </p>
+                      <div className="flex items-center justify-between text-sm mb-4">
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4 text-zinc-500" />
+                          <span>
+                            {homework.current_students}/{homework.max_students} students
+                          </span>
+                        </div>
+                        <Badge
+                          variant={slotsLeft > 3 ? 'secondary' : 'destructive'}
+                          className="text-xs"
+                        >
+                          {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left
+                        </Badge>
+                      </div>
+                      <Button
+                        className="w-full"
+                        disabled={isEnrolled || enrolling === homework.id || slotsLeft === 0}
+                        onClick={() => handleEnroll(homework.id)}
+                      >
+                        {enrolling === homework.id
+                          ? 'Enrolling...'
+                          : isEnrolled
+                          ? 'Already Enrolled'
+                          : slotsLeft === 0
+                          ? 'Full'
+                          : 'Enroll Now'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

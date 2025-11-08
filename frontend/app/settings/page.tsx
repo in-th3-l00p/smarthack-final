@@ -7,10 +7,14 @@ import { Button } from '@/components/ui/button';
 import { DataPrivacyPanel } from '@/components/DataPrivacyPanel';
 import { getProfile, updateProfile } from '@/lib/supabase/queries';
 import type { Profile } from '@/lib/types/database';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { User, Settings as SettingsIcon } from 'lucide-react';
-import { createSupabaseClient } from '@/lib/supabase/client';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
-const supabase = createSupabaseClient();
+const supabase = createSupabaseBrowserClient();
 
 export default function SettingsPage() {
   const { address } = useAccount();

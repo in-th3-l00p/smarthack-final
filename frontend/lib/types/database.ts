@@ -1,133 +1,153 @@
-export type UserRole = 'teacher' | 'student' | 'both';
-export type TaskDifficulty = 'beginner' | 'intermediate' | 'advanced';
-export type TaskStatus = 'active' | 'completed' | 'cancelled';
-export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
-export type TransactionType = 'stake' | 'reward' | 'penalty' | 'refund';
-export type TransactionStatus = 'pending' | 'completed' | 'failed';
-export type ChatRoomType = 'task_discussion' | 'general' | 'ai_assistance';
-export type NotificationType = 'task_submitted' | 'task_graded' | 'new_task' | 'message' | 'reward';
+// ============================================
+// DATABASE TYPES - MVP Schema
+// ============================================
 
+export type UserRole = 'student' | 'teacher';
+export type EnrollmentStatus = 'active' | 'completed' | 'reviewed';
+export type VoteType = 'upvote' | 'downvote';
+export type TransactionType = 'earned' | 'spent' | 'initial' | 'mentor_reward';
+
+// ============================================
+// PROFILE
+// ============================================
 export interface Profile {
   id: string;
   wallet_address: string;
-  role: UserRole;
   username?: string;
-  avatar_url?: string;
-  bio?: string;
-  reputation_score: number;
-  total_tasks_created: number;
-  total_tasks_completed: number;
-  total_tasks_attempted: number;
+  role: UserRole;
+  token_balance: number;
+  rating: number;
+  completed_count: number;
+  is_mentor: boolean;
+  total_reviews: number;
+  upvotes: number;
+  downvotes: number;
   created_at: string;
-  updated_at: string;
 }
 
-export interface Task {
+// ============================================
+// HOMEWORK
+// ============================================
+export interface Homework {
   id: string;
   teacher_id: string;
   title: string;
-  description: string;
-  difficulty: TaskDifficulty;
-  category: string;
-  tags: string[];
-  stake_amount: number;
-  reward_amount: number;
-  student_stake_required: number;
-  max_attempts: number;
-  time_limit_minutes?: number;
-  status: TaskStatus;
-  total_attempts: number;
-  successful_completions: number;
-  average_rating: number;
+  description?: string;
+  max_students: number;
+  current_students: number;
+  is_active: boolean;
   created_at: string;
-  updated_at: string;
-  expires_at?: string;
+  // Joined data
   teacher?: Profile;
 }
 
-export interface TaskSubmission {
+// ============================================
+// ENROLLMENT
+// ============================================
+export interface Enrollment {
   id: string;
-  task_id: string;
   student_id: string;
-  submission_content: string;
-  status: SubmissionStatus;
-  stake_amount: number;
-  reward_earned: number;
-  teacher_feedback?: string;
-  graded_at?: string;
-  created_at: string;
-  updated_at: string;
-  task?: Task;
+  homework_id: string;
+  status: EnrollmentStatus;
+  enrolled_at: string;
+  // Joined data
   student?: Profile;
+  homework?: Homework;
 }
 
-export interface StakingTransaction {
+// ============================================
+// QUESTION
+// ============================================
+export interface Question {
+  id: string;
+  student_id: string;
+  homework_id: string;
+  question_text: string;
+  is_answered: boolean;
+  created_at: string;
+  // Joined data
+  student?: Profile;
+  homework?: Homework;
+  answers?: Answer[];
+}
+
+// ============================================
+// ANSWER
+// ============================================
+export interface Answer {
+  id: string;
+  question_id: string;
+  answerer_id: string;
+  answer_text: string;
+  is_from_teacher: boolean;
+  tokens_earned: number;
+  created_at: string;
+  // Joined data
+  answerer?: Profile;
+  question?: Question;
+}
+
+// ============================================
+// REVIEW
+// ============================================
+export interface Review {
+  id: string;
+  reviewer_id: string;
+  student_id: string;
+  homework_id: string;
+  stars: number; // 1-5
+  comment?: string;
+  created_at: string;
+  // Joined data
+  reviewer?: Profile;
+  student?: Profile;
+  homework?: Homework;
+}
+
+// ============================================
+// VOTE (DAO System)
+// ============================================
+export interface Vote {
+  id: string;
+  voter_id: string;
+  voted_for_id: string;
+  vote_type: VoteType;
+  voter_role: UserRole;
+  created_at: string;
+  // Joined data
+  voter?: Profile;
+  voted_for?: Profile;
+}
+
+// ============================================
+// TOKEN TRANSACTION
+// ============================================
+export interface TokenTransaction {
   id: string;
   user_id: string;
-  task_id?: string;
-  submission_id?: string;
-  transaction_type: TransactionType;
   amount: number;
-  tx_hash?: string;
-  status: TransactionStatus;
+  type: TransactionType;
+  description?: string;
   created_at: string;
+  // Joined data
+  user?: Profile;
 }
 
-export interface TaskRating {
-  id: string;
-  task_id: string;
-  student_id: string;
-  rating: number;
-  comment?: string;
-  created_at: string;
+// ============================================
+// HELPER TYPES
+// ============================================
+
+export interface HomeworkWithTeacher extends Homework {
+  teacher: Profile;
 }
 
-export interface TeacherRating {
-  id: string;
-  teacher_id: string;
-  student_id: string;
-  rating: number;
-  comment?: string;
-  task_id?: string;
-  created_at: string;
+export interface QuestionWithDetails extends Question {
+  student: Profile;
+  homework: Homework;
+  answers: (Answer & { answerer: Profile })[];
 }
 
-export interface ChatRoom {
-  id: string;
-  task_id?: string;
-  name: string;
-  type: ChatRoomType;
-  created_at: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  room_id: string;
-  sender_id?: string;
-  message: string;
-  is_ai_message: boolean;
-  created_at: string;
-  sender?: Profile;
-}
-
-export interface RecommendationExplanation {
-  id: string;
-  user_id: string;
-  task_id: string;
-  explanation: string;
-  relevance_score?: number;
-  factors?: Record<string, any>;
-  created_at: string;
-  task?: Task;
-}
-
-export interface Notification {
-  id: string;
-  user_id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  read: boolean;
-  related_id?: string;
-  created_at: string;
+export interface EnrollmentWithDetails extends Enrollment {
+  student: Profile;
+  homework: HomeworkWithTeacher;
 }

@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { getChatMessages, sendChatMessage } from '@/lib/supabase/queries';
 import type { ChatMessage } from '@/lib/types/database';
 import { Send, Bot, User as UserIcon } from 'lucide-react';
-import { createSupabaseClient } from '@/lib/supabase/client';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
-const supabase = createSupabaseClient();
+const supabase = createSupabaseBrowserClient();
 
 interface ChatInterfaceProps {
   roomId: string;

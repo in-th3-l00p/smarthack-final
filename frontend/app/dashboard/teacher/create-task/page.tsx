@@ -6,11 +6,15 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createTask } from '@/lib/supabase/queries';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { ArrowLeft, Coins, Clock, BookOpen } from 'lucide-react';
 import Link from 'next/link';
-import { createSupabaseClient } from '@/lib/supabase/client';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
-const supabase = createSupabaseClient();
+const supabase = createSupabaseBrowserClient();
 
 export default function CreateTaskPage() {
   const { address } = useAccount();
