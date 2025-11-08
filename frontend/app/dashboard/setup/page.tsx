@@ -44,16 +44,32 @@ export default function SetupPage() {
 
       if (profileError) throw profileError;
 
-      // If teacher, give 2 initial tokens
+      // If teacher, give 1000 initial tokens
       if (formData.role === 'teacher') {
         const { error: tokenError } = await supabase
           .from('token_transactions')
           .insert([
             {
               user_id: profile.id,
-              amount: 2,
+              amount: 1000,
               type: 'initial',
               description: 'Welcome bonus for teachers',
+            },
+          ]);
+
+        if (tokenError) throw tokenError;
+      }
+
+      // If student, give 100 initial tokens
+      if (formData.role === 'student') {
+        const { error: tokenError } = await supabase
+          .from('token_transactions')
+          .insert([
+            {
+              user_id: profile.id,
+              amount: 100,
+              type: 'initial',
+              description: 'Welcome bonus for students',
             },
           ]);
 

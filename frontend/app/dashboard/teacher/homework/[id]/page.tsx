@@ -6,9 +6,10 @@ import { useAccount } from 'wagmi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getHomework, getEnrollments, updateHomework } from '@/lib/supabase/queries';
-import type { HomeworkWithTeacher, EnrollmentWithDetails } from '@/lib/types/database';
-import { BookOpen, Users, ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { getHomework, getEnrollments, updateHomework, deleteHomework, getTaskResources, createTaskResource, deleteTaskResource } from '@/lib/supabase/queries';
+import type { HomeworkWithTeacher, EnrollmentWithDetails, TaskResource } from '@/lib/types/database';
+import { BookOpen, Users, ArrowLeft, Settings as SettingsIcon, Upload, FileText, Download, Trash2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
@@ -22,6 +23,11 @@ export default function HomeworkDetailPage() {
   const [enrollments, setEnrollments] = useState<EnrollmentWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [taskResources, setTaskResources] = useState<TaskResource[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!isConnected) {
@@ -45,6 +51,8 @@ export default function HomeworkDetailPage() {
           return;
         }
 
+        setProfile(profileData);
+
         // Load homework
         const homeworkData = await getHomework(params.id as string);
 
@@ -60,6 +68,10 @@ export default function HomeworkDetailPage() {
         // Load enrollments
         const enrollmentsData = await getEnrollments({ homeworkId: params.id as string });
         setEnrollments(enrollmentsData);
+
+        // Load task resources
+        const resourcesData = await getTaskResources({ homeworkId: params.id as string });
+        setTaskResources(resourcesData);
       } catch (error: any) {
         console.error('Error loading task:', error);
         alert('Error loading task details');
@@ -84,6 +96,116 @@ export default function HomeworkDetailPage() {
       alert('Error updating task status');
     } finally {
       setToggling(false);
+    }
+  }
+
+  async function handleDeleteTask() {
+    if (!homework) return;
+
+    if (!confirm('Are you sure you want to delete this task? This action cannot be undone. All enrollments, submissions, and resources will be deleted.')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      // Delete all task resources from storage first
+      for (const resource of taskResources) {
+        const urlParts = resource.file_url.split('/task-resources/');
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1];
+          await supabase.storage.from('task-resources').remove([filePath]);
+        }
+      }
+
+      // Delete the homework (cascade will delete enrollments, submissions, etc.)
+      await deleteHomework(homework.id);
+
+      alert('Task deleted successfully!');
+      router.push('/dashboard/teacher');
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Error deleting task. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function handleFileUpload() {
+    if (!uploadedFile || !homework || !profile) return;
+
+    setUploading(true);
+    try {
+      // Upload file to Supabase Storage
+      const fileExt = uploadedFile.name.split('.').pop();
+      const fileName = `${profile.id}/${homework.id}/${Date.now()}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('task-resources')
+        .upload(fileName, uploadedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('task-resources')
+        .getPublicUrl(fileName);
+
+      // Create task resource record
+      await createTaskResource({
+        homework_id: homework.id,
+        teacher_id: profile.id,
+        file_url: publicUrl,
+        file_name: uploadedFile.name,
+        file_type: uploadedFile.type,
+      });
+
+      // Reload task resources
+      const resourcesData = await getTaskResources({ homeworkId: homework.id });
+      setTaskResources(resourcesData);
+
+      setUploadedFile(null);
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
+      alert('Resource file uploaded successfully!');
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      alert('Error uploading file. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDeleteResource(resourceId: string, fileUrl: string) {
+    if (!confirm('Are you sure you want to delete this resource?')) return;
+
+    try {
+      // Extract file path from URL
+      const urlParts = fileUrl.split('/task-resources/');
+      if (urlParts.length > 1) {
+        const filePath = urlParts[1];
+
+        // Delete from storage
+        await supabase
+          .storage
+          .from('task-resources')
+          .remove([filePath]);
+      }
+
+      // Delete from database
+      await deleteTaskResource(resourceId);
+
+      // Reload task resources
+      const resourcesData = await getTaskResources({ homeworkId: homework!.id });
+      setTaskResources(resourcesData);
+
+      alert('Resource deleted successfully!');
+    } catch (error: any) {
+      console.error('Error deleting resource:', error);
+      alert('Error deleting resource. Please try again.');
     }
   }
 
@@ -116,6 +238,9 @@ export default function HomeworkDetailPage() {
               <p className="text-zinc-600 dark:text-zinc-400">
                 {homework.description || 'No description provided'}
               </p>
+              <p className="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-2">
+                Deadline: {new Date(homework.deadline).toLocaleString()}
+              </p>
             </div>
             <Badge variant={homework.is_active ? 'default' : 'secondary'} className="text-lg px-4 py-2">
               {homework.is_active ? 'Active' : 'Inactive'}
@@ -138,6 +263,14 @@ export default function HomeworkDetailPage() {
               Review Submissions ({completedEnrollments.length})
             </Button>
           </Link>
+          <Button
+            onClick={handleDeleteTask}
+            disabled={deleting}
+            variant="destructive"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {deleting ? 'Deleting...' : 'Delete Task'}
+          </Button>
         </div>
 
         {/* Stats */}
@@ -186,6 +319,90 @@ export default function HomeworkDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Task Resources Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Task Resources
+            </CardTitle>
+            <CardDescription>
+              Upload resource files (PDFs, images, documents) that students can download
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* File Upload */}
+              <div className="flex gap-4">
+                <Input
+                  type="file"
+                  onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                  className="flex-1"
+                  accept="*/*"
+                />
+                <Button
+                  onClick={handleFileUpload}
+                  disabled={!uploadedFile || uploading}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Uploaded Resources List */}
+              {taskResources.length > 0 ? (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h3 className="font-semibold text-sm mb-3">Uploaded Resources:</h3>
+                  {taskResources.map((resource) => (
+                    <div
+                      key={resource.id}
+                      className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <div>
+                          <p className="font-medium text-sm">{resource.file_name}</p>
+                          <p className="text-xs text-zinc-500">
+                            Uploaded on {new Date(resource.uploaded_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a href={resource.file_url} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline">
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
+                          </Button>
+                        </a>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteResource(resource.id, resource.file_url)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-zinc-600 border rounded-lg">
+                  No resources uploaded yet
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Enrolled Students */}
         <Card>

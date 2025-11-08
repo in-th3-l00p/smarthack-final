@@ -15,7 +15,6 @@ export function Navigation() {
   const { disconnect } = useDisconnect();
 
   const navigation = [
-    { name: 'Home', href: '/', icon: Home },
     ...(isConnected ? [
       { name: 'Dashboard', href: '/dashboard', icon: Users },
       { name: 'Settings', href: '/settings', icon: Settings },

@@ -12,6 +12,7 @@ import {
   getQuestions,
   enrollInHomework,
   checkMentorEligibility,
+  checkAndApplyDeadlinePenalties,
 } from '@/lib/supabase/queries';
 import type { HomeworkWithTeacher, EnrollmentWithDetails, Question } from '@/lib/types/database';
 import {
@@ -23,6 +24,9 @@ import {
   MessageCircle,
   CheckCircle,
   Award,
+  Clock,
+  AlertTriangle,
+  Eye,
 } from 'lucide-react';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -63,6 +67,26 @@ export default function StudentDashboard() {
         }
 
         setProfile(profileData);
+
+        // Check and apply deadline penalties
+        try {
+          const penaltiesApplied = await checkAndApplyDeadlinePenalties(profileData.id);
+          if (penaltiesApplied.length > 0) {
+            console.log('Penalties applied for missed deadlines:', penaltiesApplied);
+            // Reload profile to get updated token balance
+            const { data: updatedProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', profileData.id)
+              .single();
+            if (updatedProfile) {
+              setProfile(updatedProfile);
+            }
+          }
+        } catch (penaltyError) {
+          console.error('Error applying deadline penalties:', penaltyError);
+          // Don't block the dashboard if penalty check fails
+        }
 
         // Check mentor eligibility
         const eligible = await checkMentorEligibility(profileData.id);
@@ -210,27 +234,12 @@ export default function StudentDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {profile.is_mentor ? 'Token Balance' : 'Questions'}
-              </CardTitle>
-              {profile.is_mentor ? (
-                <Coins className="h-4 w-4 text-yellow-600" />
-              ) : (
-                <MessageCircle className="h-4 w-4 text-purple-600" />
-              )}
+              <CardTitle className="text-sm font-medium">Token Balance</CardTitle>
+              <Coins className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              {profile.is_mentor ? (
-                <>
-                  <div className="text-2xl font-bold">{profile.token_balance}</div>
-                  <p className="text-xs text-zinc-500">tokens earned</p>
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{unansweredQuestions}</div>
-                  <p className="text-xs text-zinc-500">pending answers</p>
-                </>
-              )}
+              <div className="text-2xl font-bold">{profile.token_balance}</div>
+              <p className="text-xs text-zinc-500">tokens</p>
             </CardContent>
           </Card>
         </div>
@@ -240,57 +249,83 @@ export default function StudentDashboard() {
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-4">My Enrollments</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {myEnrollments.map((enrollment) => (
-                <Card key={enrollment.id} className="border-blue-500">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">
-                          {enrollment.homework?.title}
-                        </CardTitle>
-                        <CardDescription>
-                          Teacher: {enrollment.homework?.teacher?.username || 'Unknown'}
-                        </CardDescription>
+              {myEnrollments.map((enrollment) => {
+                const deadline = enrollment.homework?.deadline ? new Date(enrollment.homework.deadline) : null;
+                const now = new Date();
+                const hoursUntilDeadline = deadline ? (deadline.getTime() - now.getTime()) / (1000 * 60 * 60) : null;
+                const isDeadlineClose = hoursUntilDeadline !== null && hoursUntilDeadline > 0 && hoursUntilDeadline <= 24;
+                const isDeadlinePassed = hoursUntilDeadline !== null && hoursUntilDeadline <= 0;
+
+                return (
+                  <Card key={enrollment.id} className={`border-blue-500 ${isDeadlineClose ? 'border-orange-500' : ''} ${isDeadlinePassed ? 'border-red-500' : ''}`}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg">
+                            {enrollment.homework?.title}
+                          </CardTitle>
+                          <CardDescription>
+                            Teacher: {enrollment.homework?.teacher?.username || 'Unknown'}
+                          </CardDescription>
+                          {deadline && (
+                            <div className="flex items-center gap-1 mt-2">
+                              {isDeadlinePassed ? (
+                                <AlertTriangle className="w-3 h-3 text-red-600" />
+                              ) : isDeadlineClose ? (
+                                <AlertTriangle className="w-3 h-3 text-orange-600" />
+                              ) : (
+                                <Clock className="w-3 h-3 text-zinc-500" />
+                              )}
+                              <span className={`text-xs font-semibold ${
+                                isDeadlinePassed ? 'text-red-600' : isDeadlineClose ? 'text-orange-600' : 'text-zinc-600'
+                              }`}>
+                                {deadline.toLocaleString()}
+                                {isDeadlinePassed && ' (Passed)'}
+                                {isDeadlineClose && !isDeadlinePassed && ' (Soon!)'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <Badge
+                          variant={
+                            enrollment.status === 'reviewed'
+                              ? 'default'
+                              : enrollment.status === 'completed'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                        >
+                          {enrollment.status}
+                        </Badge>
                       </div>
-                      <Badge
-                        variant={
-                          enrollment.status === 'reviewed'
-                            ? 'default'
-                            : enrollment.status === 'completed'
-                            ? 'secondary'
-                            : 'outline'
-                        }
-                      >
-                        {enrollment.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-zinc-600 mb-4 line-clamp-2">
-                      {enrollment.homework?.description || 'No description'}
-                    </p>
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/dashboard/student/homework/${enrollment.homework_id}`}
-                        className="flex-1"
-                      >
-                        <Button variant="outline" size="sm" className="w-full">
-                          <MessageCircle className="w-4 h-4 mr-2" />
-                          Ask Question
-                        </Button>
-                      </Link>
-                      <Link
-                        href={`/dashboard/student/homework/${enrollment.homework_id}/questions`}
-                        className="flex-1"
-                      >
-                        <Button variant="default" size="sm" className="w-full">
-                          View Questions
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-zinc-600 mb-4 line-clamp-2">
+                        {enrollment.homework?.description || 'No description'}
+                      </p>
+                      <div className="space-y-2">
+                        <Link href={`/dashboard/student/homework/${enrollment.homework_id}`}>
+                          <Button variant="default" size="sm" className="w-full">
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Task
+                          </Button>
+                        </Link>
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/dashboard/student/homework/${enrollment.homework_id}/questions`}
+                            className="flex-1"
+                          >
+                            <Button variant="outline" size="sm" className="w-full">
+                              <MessageCircle className="w-4 h-4 mr-2" />
+                              Questions
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -349,19 +384,27 @@ export default function StudentDashboard() {
                           {slotsLeft} {slotsLeft === 1 ? 'slot' : 'slots'} left
                         </Badge>
                       </div>
-                      <Button
-                        className="w-full"
-                        disabled={isEnrolled || enrolling === homework.id || slotsLeft === 0}
-                        onClick={() => handleEnroll(homework.id)}
-                      >
-                        {enrolling === homework.id
-                          ? 'Enrolling...'
-                          : isEnrolled
-                          ? 'Already Enrolled'
-                          : slotsLeft === 0
-                          ? 'Full'
-                          : 'Enroll Now'}
-                      </Button>
+                      <div className="space-y-2">
+                        <Link href={`/dashboard/student/task/${homework.id}`}>
+                          <Button variant="outline" size="sm" className="w-full">
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Task Details
+                          </Button>
+                        </Link>
+                        <Button
+                          className="w-full"
+                          disabled={isEnrolled || enrolling === homework.id || slotsLeft === 0}
+                          onClick={() => handleEnroll(homework.id)}
+                        >
+                          {enrolling === homework.id
+                            ? 'Enrolling...'
+                            : isEnrolled
+                            ? 'Already Enrolled'
+                            : slotsLeft === 0
+                            ? 'Full'
+                            : 'Enroll Now'}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );

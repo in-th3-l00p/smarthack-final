@@ -13,9 +13,11 @@ import {
   getReviews,
   createReview,
   updateEnrollmentStatus,
+  getSubmissions,
+  createTokenTransaction,
 } from '@/lib/supabase/queries';
-import type { Homework, EnrollmentWithDetails, Review } from '@/lib/types/database';
-import { Star, Loader2, CheckCircle } from 'lucide-react';
+import type { Homework, EnrollmentWithDetails, Review, Submission } from '@/lib/types/database';
+import { Star, Loader2, CheckCircle, FileText, Download } from 'lucide-react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 const supabase = createSupabaseBrowserClient();
@@ -35,6 +37,7 @@ export default function ReviewStudentsPage() {
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submissions, setSubmissions] = useState<Record<string, Submission[]>>({});
 
   useEffect(() => {
     if (!isConnected) {
@@ -77,6 +80,16 @@ export default function ReviewStudentsPage() {
         // Load existing reviews
         const reviewsData = await getReviews({ homeworkId });
         setExistingReviews(reviewsData);
+
+        // Load submissions for all enrollments
+        const submissionsMap: Record<string, Submission[]> = {};
+        for (const enrollment of enrollmentsData) {
+          if (enrollment.status === 'completed' || enrollment.status === 'reviewed') {
+            const enrollmentSubmissions = await getSubmissions({ enrollmentId: enrollment.id });
+            submissionsMap[enrollment.id] = enrollmentSubmissions;
+          }
+        }
+        setSubmissions(submissionsMap);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -104,6 +117,27 @@ export default function ReviewStudentsPage() {
       // Update enrollment status to 'reviewed'
       await updateEnrollmentStatus(enrollmentId, 'reviewed');
 
+      // Calculate token reward based on stars
+      let tokenReward = 0;
+      if (stars === 5) {
+        tokenReward = 50;
+      } else if (stars === 4) {
+        tokenReward = 30;
+      } else if (stars === 3) {
+        tokenReward = 10;
+      }
+      // stars < 3 = 0 tokens
+
+      // Create token transaction if reward > 0
+      if (tokenReward > 0) {
+        await createTokenTransaction({
+          user_id: studentId,
+          amount: tokenReward,
+          type: 'earned',
+          description: `Earned ${tokenReward} tokens for ${stars}-star review on: ${homework?.title}`,
+        });
+      }
+
       // Refresh reviews and enrollments
       const reviewsData = await getReviews({ homeworkId });
       setExistingReviews(reviewsData);
@@ -114,7 +148,12 @@ export default function ReviewStudentsPage() {
       setReviewingStudentId(null);
       setStars(5);
       setComment('');
-      alert('Review submitted successfully! ✅');
+
+      if (tokenReward > 0) {
+        alert(`Review submitted successfully! Student earned ${tokenReward} tokens.`);
+      } else {
+        alert('Review submitted successfully!');
+      }
     } catch (error: any) {
       console.error('Error submitting review:', error);
       if (error.message?.includes('duplicate')) {
@@ -220,6 +259,66 @@ export default function ReviewStudentsPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {/* Student Submissions */}
+                    {(enrollment.status === 'completed' || enrollment.status === 'reviewed') && (
+                      <div className="mb-6 space-y-4">
+                        {/* Text Submission */}
+                        {enrollment.submission_text && (
+                          <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                            <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Text Submission:
+                            </h3>
+                            <div className="bg-white dark:bg-zinc-800 p-3 rounded-md">
+                              <pre className="text-sm whitespace-pre-wrap font-mono">
+                                {enrollment.submission_text}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* File Submissions */}
+                        {submissions[enrollment.id] && submissions[enrollment.id].length > 0 && (
+                          <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              File Submissions:
+                            </h3>
+                            <div className="space-y-2">
+                              {submissions[enrollment.id].map((submission) => (
+                                <div
+                                  key={submission.id}
+                                  className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800 rounded-lg"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <FileText className="w-4 h-4 text-blue-600" />
+                                    <div>
+                                      <p className="font-medium text-sm">{submission.file_name}</p>
+                                      <p className="text-xs text-zinc-500">
+                                        {submission.file_type} • Uploaded {new Date(submission.submitted_at).toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <a href={submission.file_url} target="_blank" rel="noopener noreferrer">
+                                    <Button size="sm" variant="outline">
+                                      <Download className="w-4 h-4 mr-2" />
+                                      Download
+                                    </Button>
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {!enrollment.submission_text && (!submissions[enrollment.id] || submissions[enrollment.id].length === 0) && (
+                          <div className="border rounded-lg p-4 text-center text-zinc-500">
+                            No submissions yet
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Existing Review */}
                     {existingReview && (
                       <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">

@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getHomeworks, getEnrollments, getQuestions } from '@/lib/supabase/queries';
-import type { Homework, Profile, Question } from '@/lib/types/database';
-import { Plus, BookOpen, Users, HelpCircle, Coins, TrendingUp } from 'lucide-react';
+import { getHomeworks, getEnrollments, getQuestions, getSubmissions } from '@/lib/supabase/queries';
+import type { Homework, Profile, Question, Submission } from '@/lib/types/database';
+import { Plus, BookOpen, Users, HelpCircle, Coins, TrendingUp, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
@@ -20,6 +20,7 @@ export default function TeacherDashboard() {
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [unansweredQuestions, setUnansweredQuestions] = useState<Question[]>([]);
+  const [unreviewedSubmissions, setUnreviewedSubmissions] = useState<Submission[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -68,6 +69,14 @@ export default function TeacherDashboard() {
         }
 
         setUnansweredQuestions(allQuestions);
+
+        // Load unreviewed submissions
+        const allSubmissions: Submission[] = [];
+        for (const hwId of homeworkIds) {
+          const submissions = await getSubmissions({ homeworkId: hwId, status: 'submitted' });
+          allSubmissions.push(...submissions);
+        }
+        setUnreviewedSubmissions(allSubmissions);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -119,7 +128,7 @@ export default function TeacherDashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Token Balance</CardTitle>
@@ -164,6 +173,21 @@ export default function TeacherDashboard() {
             <div className="text-2xl font-bold">{unansweredQuestions.length}</div>
             <p className="text-xs text-zinc-500">
               <Link href="/dashboard/teacher/questions" className="text-blue-600 hover:underline">
+                View all →
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Unreviewed Work</CardTitle>
+            <FileText className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{unreviewedSubmissions.length}</div>
+            <p className="text-xs text-zinc-500">
+              <Link href="/dashboard/teacher/submissions" className="text-blue-600 hover:underline">
                 View all →
               </Link>
             </p>

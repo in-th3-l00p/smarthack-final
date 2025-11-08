@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { createHomework, createTokenTransaction } from '@/lib/supabase/queries';
-import { BookOpen, Loader2, Coins, AlertCircle } from 'lucide-react';
+import { createHomework, createTokenTransaction, createTaskResource } from '@/lib/supabase/queries';
+import { BookOpen, Loader2, Coins, AlertCircle, Upload, FileText, X } from 'lucide-react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 const supabase = createSupabaseBrowserClient();
@@ -23,7 +23,9 @@ export default function CreateHomeworkPage() {
     title: '',
     description: '',
     max_students: 10,
+    deadline: '',
   });
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   useEffect(() => {
     if (!isConnected) {
@@ -55,6 +57,17 @@ export default function CreateHomeworkPage() {
     loadProfile();
   }, [address, isConnected, router]);
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    setUploadedFiles([...uploadedFiles, ...files]);
+    // Reset the input
+    e.target.value = '';
+  }
+
+  function removeFile(index: number) {
+    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!profile || profile.token_balance < 1) {
@@ -70,7 +83,42 @@ export default function CreateHomeworkPage() {
         title: formData.title,
         description: formData.description,
         max_students: formData.max_students,
+        deadline: formData.deadline,
       });
+
+      // Upload resource files if any
+      if (uploadedFiles.length > 0) {
+        for (const file of uploadedFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${profile.id}/${homework.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+          // Upload to Supabase Storage
+          const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('task-resources')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error('Error uploading file:', uploadError);
+            continue; // Skip this file and continue with others
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase
+            .storage
+            .from('task-resources')
+            .getPublicUrl(fileName);
+
+          // Create task resource record
+          await createTaskResource({
+            homework_id: homework.id,
+            teacher_id: profile.id,
+            file_url: publicUrl,
+            file_name: file.name,
+            file_type: file.type,
+          });
+        }
+      }
 
       // Deduct 1 token
       await createTokenTransaction({
@@ -179,6 +227,83 @@ export default function CreateHomeworkPage() {
                 <p className="text-sm text-zinc-500 mt-2">
                   Maximum number of students who can enroll in this task
                 </p>
+              </div>
+
+              <div>
+                <Label htmlFor="deadline">Deadline *</Label>
+                <Input
+                  id="deadline"
+                  type="datetime-local"
+                  required
+                  value={formData.deadline}
+                  onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                  className="mt-2"
+                  disabled={profile.token_balance < 1}
+                />
+                <p className="text-sm text-zinc-500 mt-2">
+                  Deadline for students to submit their work
+                </p>
+              </div>
+
+              {/* File Upload Section */}
+              <div>
+                <Label htmlFor="files">Task Resources (Optional)</Label>
+                <div className="mt-2 space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      id="files"
+                      type="file"
+                      onChange={handleFileSelect}
+                      className="flex-1"
+                      disabled={profile.token_balance < 1}
+                      accept="*/*"
+                      multiple
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('files')?.click()}
+                      disabled={profile.token_balance < 1}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Add Files
+                    </Button>
+                  </div>
+                  <p className="text-sm text-zinc-500">
+                    Upload resource files (PDFs, images, documents) that students can download
+                  </p>
+
+                  {/* Uploaded Files List */}
+                  {uploadedFiles.length > 0 && (
+                    <div className="border rounded-lg p-3 space-y-2">
+                      <p className="text-sm font-semibold mb-2">Files to upload ({uploadedFiles.length}):</p>
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-zinc-50 dark:bg-zinc-900 rounded-lg"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-blue-600" />
+                            <div>
+                              <p className="text-sm font-medium">{file.name}</p>
+                              <p className="text-xs text-zinc-500">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeFile(index)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="pt-4 flex gap-4">

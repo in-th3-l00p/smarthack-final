@@ -10,9 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import {
   getHomework,
   getEnrollments,
+  createSubmission,
+  getSubmissions,
+  getTaskResources,
 } from '@/lib/supabase/queries';
-import type { Homework, EnrollmentWithDetails } from '@/lib/types/database';
-import { Upload, FileText, CheckCircle, MessageCircle, Loader2, ArrowLeft } from 'lucide-react';
+import type { Homework, EnrollmentWithDetails, Submission, TaskResource } from '@/lib/types/database';
+import { Upload, FileText, CheckCircle, MessageCircle, Loader2, ArrowLeft, Download, AlertTriangle, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
@@ -30,6 +34,10 @@ export default function StudentHomeworkPage() {
   const [loading, setLoading] = useState(true);
   const [submissionText, setSubmissionText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [taskResources, setTaskResources] = useState<TaskResource[]>([]);
 
   useEffect(() => {
     if (!isConnected) {
@@ -83,6 +91,18 @@ export default function StudentHomeworkPage() {
         if (submissionData?.submission_text) {
           setSubmissionText(submissionData.submission_text);
         }
+
+        // Load file submissions
+        const submissionsData = await getSubmissions({
+          enrollmentId: enrollmentsData[0].id,
+        });
+        setSubmissions(submissionsData);
+
+        // Load task resources from teacher
+        const resourcesData = await getTaskResources({
+          homeworkId,
+        });
+        setTaskResources(resourcesData);
       } catch (error: any) {
         console.error('Error loading data:', error);
         alert('Error loading task details');
@@ -128,6 +148,54 @@ export default function StudentHomeworkPage() {
     }
   }
 
+  async function handleFileUpload() {
+    if (!uploadedFile || !enrollment || !profile) return;
+
+    setUploading(true);
+    try {
+      // Upload file to Supabase Storage
+      const fileExt = uploadedFile.name.split('.').pop();
+      const fileName = `${profile.id}/${enrollment.id}/${Date.now()}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('submissions')
+        .upload(fileName, uploadedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('submissions')
+        .getPublicUrl(fileName);
+
+      // Create submission record
+      await createSubmission({
+        enrollment_id: enrollment.id,
+        student_id: profile.id,
+        homework_id: homeworkId,
+        file_url: publicUrl,
+        file_name: uploadedFile.name,
+        file_type: uploadedFile.type,
+      });
+
+      // Reload submissions
+      const submissionsData = await getSubmissions({
+        enrollmentId: enrollment.id,
+      });
+      setSubmissions(submissionsData);
+
+      setUploadedFile(null);
+      alert('File uploaded successfully! ✅');
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      alert('Error uploading file. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -139,6 +207,13 @@ export default function StudentHomeworkPage() {
   const canSubmit = enrollment.status === 'active';
   const isCompleted = enrollment.status === 'completed';
   const isReviewed = enrollment.status === 'reviewed';
+
+  // Calculate time until deadline
+  const now = new Date();
+  const deadline = new Date(homework.deadline);
+  const hoursUntilDeadline = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const isDeadlineClose = hoursUntilDeadline > 0 && hoursUntilDeadline <= 24;
+  const isDeadlinePassed = hoursUntilDeadline <= 0;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -160,6 +235,16 @@ export default function StudentHomeworkPage() {
               <p className="text-sm text-zinc-500 mt-2">
                 Teacher: {homework.teacher?.username || 'Unknown'}
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Clock className="w-4 h-4 text-zinc-500" />
+                <p className={`text-sm font-semibold ${
+                  isDeadlinePassed ? 'text-red-600' : isDeadlineClose ? 'text-orange-600' : 'text-blue-600'
+                }`}>
+                  Deadline: {deadline.toLocaleString()}
+                  {isDeadlinePassed && ' (Passed)'}
+                  {isDeadlineClose && !isDeadlinePassed && ' (Less than 24h left!)'}
+                </p>
+              </div>
             </div>
             <Badge
               variant={
@@ -171,6 +256,44 @@ export default function StudentHomeworkPage() {
             </Badge>
           </div>
         </div>
+
+        {/* Deadline Warning */}
+        {isDeadlineClose && !isCompleted && !isReviewed && (
+          <Card className="mb-6 border-orange-500 bg-orange-50 dark:bg-orange-900/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-orange-600" />
+                <div>
+                  <p className="font-semibold text-orange-900 dark:text-orange-100">
+                    Deadline Approaching!
+                  </p>
+                  <p className="text-sm text-orange-700 dark:text-orange-200">
+                    You have less than 24 hours to submit your work. Submit soon to avoid penalty!
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Deadline Passed Warning */}
+        {isDeadlinePassed && !isCompleted && !isReviewed && (
+          <Card className="mb-6 border-red-500 bg-red-50 dark:bg-red-900/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+                <div>
+                  <p className="font-semibold text-red-900 dark:text-red-100">
+                    Deadline Passed!
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-200">
+                    The deadline for this task has passed. You will receive a penalty of -20 tokens.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Actions */}
         <div className="flex gap-4 mb-8">
@@ -198,16 +321,133 @@ export default function StudentHomeworkPage() {
           </Card>
         )}
 
-        {/* Submit Solution */}
+        {/* Task Resources from Teacher */}
+        {taskResources.length > 0 && (
+          <Card className="mb-8 border-blue-500 bg-blue-50 dark:bg-blue-900/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Task Resources
+              </CardTitle>
+              <CardDescription>
+                Materials provided by your teacher for this task
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {taskResources.map((resource) => (
+                  <div
+                    key={resource.id}
+                    className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <div>
+                        <p className="font-medium text-sm">{resource.file_name}</p>
+                        <p className="text-xs text-zinc-500">
+                          Uploaded on {new Date(resource.uploaded_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <a href={resource.file_url} target="_blank" rel="noopener noreferrer">
+                      <Button size="sm" variant="outline">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* File Upload Section */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Upload Files
+            </CardTitle>
+            <CardDescription>
+              Upload your work in any format (PDF, DOCX, ZIP, images, etc.)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <Input
+                  type="file"
+                  onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                  className="flex-1"
+                  disabled={!canSubmit}
+                  accept="*/*"
+                />
+                <Button
+                  onClick={handleFileUpload}
+                  disabled={!uploadedFile || uploading || !canSubmit}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Uploaded Files List */}
+              {submissions.length > 0 && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h3 className="font-semibold text-sm mb-3">Uploaded Files:</h3>
+                  {submissions.map((submission) => (
+                    <div
+                      key={submission.id}
+                      className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <div>
+                          <p className="font-medium text-sm">{submission.file_name}</p>
+                          <p className="text-xs text-zinc-500">
+                            Uploaded on {new Date(submission.submitted_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={submission.status === 'reviewed' ? 'default' : 'secondary'}>
+                          {submission.status}
+                        </Badge>
+                        <a href={submission.file_url} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline">
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
+                          </Button>
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Submit Solution (Text) */}
         <Card className={canSubmit ? 'border-blue-500' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              {canSubmit ? 'Submit Your Solution' : 'Your Submission'}
+              {canSubmit ? 'Submit Your Solution (Text)' : 'Your Text Submission'}
             </CardTitle>
             <CardDescription>
               {canSubmit
-                ? 'Write your solution below and submit when ready'
+                ? 'Or write your solution below and submit when ready'
                 : isCompleted
                 ? 'Your solution has been submitted and is awaiting review'
                 : 'Your solution has been reviewed by your teacher'}
@@ -238,7 +478,7 @@ export default function StudentHomeworkPage() {
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      Submit Solution
+                      Submit Text Solution
                     </>
                   )}
                 </Button>
