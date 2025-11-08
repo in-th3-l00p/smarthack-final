@@ -23,8 +23,6 @@ import {
   MessageCircle,
   CheckCircle,
   Award,
-  Clock,
-  AlertTriangle,
   Eye,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -158,7 +156,7 @@ export default function StudentDashboard() {
                       🎉 You're eligible to become a Mentor!
                     </p>
                     <p className="text-sm text-purple-700 dark:text-purple-200">
-                      You have {profile.rating.toFixed(1)}+ stars and {profile.completed_count}+
+                      You have {profile?.rating?.toFixed(1) || '0.0'}+ stars and {profile?.completed_count || 0}+
                       completed tasks
                     </p>
                   </div>
@@ -193,7 +191,7 @@ export default function StudentDashboard() {
               <CheckCircle className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{profile.completed_count}</div>
+              <div className="text-2xl font-bold">{profile?.completed_count || 0}</div>
               <p className="text-xs text-zinc-500">tasks finished</p>
             </CardContent>
           </Card>
@@ -204,9 +202,9 @@ export default function StudentDashboard() {
               <Star className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{profile.rating.toFixed(1)}/5</div>
+              <div className="text-2xl font-bold">{profile?.rating?.toFixed(1) || '0.0'}/5</div>
               <p className="text-xs text-zinc-500">
-                {profile.total_reviews} {profile.total_reviews === 1 ? 'review' : 'reviews'}
+                {profile?.total_reviews || 0} {(profile?.total_reviews || 0) === 1 ? 'review' : 'reviews'}
               </p>
             </CardContent>
           </Card>
@@ -217,7 +215,7 @@ export default function StudentDashboard() {
               <Coins className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{profile.token_balance}</div>
+              <div className="text-2xl font-bold">{profile?.token_balance || 0}</div>
               <p className="text-xs text-zinc-500">tokens</p>
             </CardContent>
           </Card>

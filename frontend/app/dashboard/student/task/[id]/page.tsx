@@ -12,7 +12,7 @@ import {
   enrollInHomework,
 } from '@/lib/supabase/queries';
 import type { Homework, TaskResource } from '@/lib/types/database';
-import { ArrowLeft, Download, FileText, Users, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Users, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 

@@ -15,7 +15,7 @@ import {
   getTaskResources,
 } from '@/lib/supabase/queries';
 import type { Homework, EnrollmentWithDetails, Submission, TaskResource } from '@/lib/types/database';
-import { Upload, FileText, CheckCircle, MessageCircle, Loader2, ArrowLeft, Download, AlertTriangle, Clock } from 'lucide-react';
+import { Upload, FileText, CheckCircle, MessageCircle, Loader2, ArrowLeft, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -431,7 +431,9 @@ export default function StudentHomeworkPage() {
               {isCompleted && (
                 <div className="flex items-center justify-center gap-2 text-green-600">
                   <CheckCircle className="w-5 h-5" />
-                  <p className="font-semibold">Submitted on {new Date(enrollment.completed_at || '').toLocaleDateString()}</p>
+                  <p className="font-semibold">
+                    Submitted on {enrollment.completed_at ? new Date(enrollment.completed_at).toLocaleDateString() : 'N/A'}
+                  </p>
                 </div>
               )}
             </div>

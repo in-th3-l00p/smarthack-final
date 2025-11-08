@@ -85,36 +85,48 @@ export default function CreateHomeworkPage() {
       });
 
       // Upload resource files if any
+      const uploadResults = { success: 0, failed: 0, failedFiles: [] as string[] };
+
       if (uploadedFiles.length > 0) {
         for (const file of uploadedFiles) {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${profile.id}/${homework.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${profile.id}/${homework.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-          // Upload to Supabase Storage
-          const { data: uploadData, error: uploadError } = await supabase
-            .storage
-            .from('task-resources')
-            .upload(fileName, file);
+            // Upload to Supabase Storage
+            const { data: uploadData, error: uploadError } = await supabase
+              .storage
+              .from('task-resources')
+              .upload(fileName, file);
 
-          if (uploadError) {
-            console.error('Error uploading file:', uploadError);
-            continue; // Skip this file and continue with others
+            if (uploadError) {
+              console.error('Error uploading file:', uploadError);
+              uploadResults.failed++;
+              uploadResults.failedFiles.push(file.name);
+              continue; // Skip this file and continue with others
+            }
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase
+              .storage
+              .from('task-resources')
+              .getPublicUrl(fileName);
+
+            // Create task resource record
+            await createTaskResource({
+              homework_id: homework.id,
+              teacher_id: profile.id,
+              file_url: publicUrl,
+              file_name: file.name,
+              file_type: file.type,
+            });
+
+            uploadResults.success++;
+          } catch (fileError) {
+            console.error(`Error processing file ${file.name}:`, fileError);
+            uploadResults.failed++;
+            uploadResults.failedFiles.push(file.name);
           }
-
-          // Get public URL
-          const { data: { publicUrl } } = supabase
-            .storage
-            .from('task-resources')
-            .getPublicUrl(fileName);
-
-          // Create task resource record
-          await createTaskResource({
-            homework_id: homework.id,
-            teacher_id: profile.id,
-            file_url: publicUrl,
-            file_name: file.name,
-            file_type: file.type,
-          });
         }
       }
 
@@ -126,7 +138,19 @@ export default function CreateHomeworkPage() {
         description: `Created homework: ${formData.title}`,
       });
 
-      alert('Task created successfully! ✅');
+      // Provide detailed feedback about upload results
+      if (uploadedFiles.length > 0) {
+        if (uploadResults.failed === 0) {
+          alert(`Task created successfully! ✅\nAll ${uploadResults.success} files uploaded.`);
+        } else if (uploadResults.success > 0) {
+          alert(`Task created with warnings! ⚠️\n${uploadResults.success} files uploaded successfully.\n${uploadResults.failed} files failed:\n${uploadResults.failedFiles.join('\n')}`);
+        } else {
+          alert(`Task created but file upload failed! ❌\nFailed files:\n${uploadResults.failedFiles.join('\n')}\nPlease try uploading the files again from the task page.`);
+        }
+      } else {
+        alert('Task created successfully! ✅');
+      }
+
       router.push('/dashboard/teacher');
     } catch (error) {
       console.error('Error creating task:', error);

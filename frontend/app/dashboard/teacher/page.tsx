@@ -59,23 +59,30 @@ export default function TeacherDashboard() {
         }
         setTotalStudents(totalEnrolled);
 
-        // Load unanswered questions on teacher's homeworks
+        // Load unanswered questions and unreviewed submissions in parallel
         const homeworkIds = homeworksData.map(hw => hw.id);
-        const allQuestions: Question[] = [];
 
-        for (const hwId of homeworkIds) {
-          const questions = await getQuestions({ homeworkId: hwId, isAnswered: false });
-          allQuestions.push(...questions);
-        }
+        // Use Promise.all for parallel queries instead of sequential
+        const [questionsResults, submissionsResults] = await Promise.all([
+          Promise.all(homeworkIds.map(hwId =>
+            getQuestions({ homeworkId: hwId, isAnswered: false }).catch(err => {
+              console.error(`Error loading questions for homework ${hwId}:`, err);
+              return [];
+            })
+          )),
+          Promise.all(homeworkIds.map(hwId =>
+            getSubmissions({ homeworkId: hwId, status: 'submitted' }).catch(err => {
+              console.error(`Error loading submissions for homework ${hwId}:`, err);
+              return [];
+            })
+          ))
+        ]);
+
+        // Flatten results
+        const allQuestions = questionsResults.flat();
+        const allSubmissions = submissionsResults.flat();
 
         setUnansweredQuestions(allQuestions);
-
-        // Load unreviewed submissions
-        const allSubmissions: Submission[] = [];
-        for (const hwId of homeworkIds) {
-          const submissions = await getSubmissions({ homeworkId: hwId, status: 'submitted' });
-          allSubmissions.push(...submissions);
-        }
         setUnreviewedSubmissions(allSubmissions);
       } catch (error) {
         console.error('Error loading data:', error);
