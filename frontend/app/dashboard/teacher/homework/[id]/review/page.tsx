@@ -188,33 +188,33 @@ export default function ReviewStudentsPage() {
   const reviewedCount = existingReviews.filter(r => r.reviewer_id === profile.id).length;
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 gradient-bg min-h-screen">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Review Students</h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+        <div className="mb-8 animate-fade-in">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">Review Students</h1>
+          <p className="text-muted-foreground">
             Give feedback to students enrolled in this task: <strong>{homework.title}</strong>
           </p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
+          <Card className="glass-card rounded-2xl hover-lift border-primary/10 animate-fade-in">
             <CardContent className="pt-6">
-              <p className="text-sm text-zinc-600">Total Enrolled</p>
-              <p className="text-3xl font-bold">{enrollments.length}</p>
+              <p className="text-sm text-muted-foreground">Total Enrolled</p>
+              <p className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{enrollments.length}</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="glass-card rounded-2xl hover-lift border-primary/10 animate-fade-in" style={{animationDelay: '100ms'}}>
             <CardContent className="pt-6">
-              <p className="text-sm text-zinc-600">Reviewed by You</p>
-              <p className="text-3xl font-bold text-green-600">{reviewedCount}</p>
+              <p className="text-sm text-muted-foreground">Reviewed by You</p>
+              <p className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{reviewedCount}</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="glass-card rounded-2xl hover-lift border-primary/10 animate-fade-in" style={{animationDelay: '200ms'}}>
             <CardContent className="pt-6">
-              <p className="text-sm text-zinc-600">Pending</p>
-              <p className="text-3xl font-bold text-orange-600">
+              <p className="text-sm text-muted-foreground">Pending</p>
+              <p className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
                 {enrollments.length - reviewedCount}
               </p>
             </CardContent>
@@ -224,9 +224,9 @@ export default function ReviewStudentsPage() {
         {/* Students List */}
         <div className="space-y-4">
           {enrollments.length === 0 ? (
-            <Card>
+            <Card className="glass-card rounded-2xl border-primary/10">
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-zinc-600">No students enrolled yet</p>
+                <p className="text-muted-foreground">No students enrolled yet</p>
               </CardContent>
             </Card>
           ) : (
@@ -239,7 +239,7 @@ export default function ReviewStudentsPage() {
               return (
                 <Card
                   key={enrollment.id}
-                  className={existingReview ? 'border-green-500' : 'border-orange-500'}
+                  className={existingReview ? 'glass-card rounded-2xl hover-lift border-primary/50' : 'glass-card rounded-2xl hover-lift border-primary/20'}
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -247,7 +247,7 @@ export default function ReviewStudentsPage() {
                         <div className="flex items-center gap-2 mb-2">
                           <CardTitle className="text-xl">{student.username || 'Anonymous'}</CardTitle>
                           {existingReview && (
-                            <Badge variant="default" className="bg-green-600">
+                            <Badge variant="default" className="bg-primary">
                               <CheckCircle className="w-3 h-3 mr-1" />
                               Reviewed
                             </Badge>
@@ -274,12 +274,12 @@ export default function ReviewStudentsPage() {
                     <div className="mb-6 space-y-4">
                       {/* Text Submission */}
                       {enrollment.submission_text && (
-                        <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                        <div className="glass-card rounded-xl p-4 border-primary/20">
                           <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
+                            <FileText className="w-4 h-4 text-primary" />
                             Text Submission:
                           </h3>
-                          <div className="bg-white dark:bg-zinc-800 p-3 rounded-md">
+                          <div className="glass-card rounded-md p-3 border-primary/10">
                             <pre className="text-sm whitespace-pre-wrap font-mono">
                               {enrollment.submission_text}
                             </pre>
@@ -289,28 +289,28 @@ export default function ReviewStudentsPage() {
 
                       {/* File Submissions */}
                       {((submissions[enrollment.id] && submissions[enrollment.id].length > 0) || enrollment.status !== 'active') && (
-                        <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                        <div className="glass-card rounded-xl p-4 border-secondary/20">
                           <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                            <FileText className="w-4 h-4" />
+                            <FileText className="w-4 h-4 text-secondary" />
                             File Submissions:
                           </h3>
                           <div className="space-y-2">
                             {(submissions[enrollment.id] || []).map((submission) => (
                               <div
                                 key={submission.id}
-                                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800 rounded-lg"
+                                className="flex items-center justify-between p-3 glass-card rounded-lg border-primary/10"
                               >
                                 <div className="flex items-center gap-3">
-                                  <FileText className="w-4 h-4 text-blue-600" />
+                                  <FileText className="w-4 h-4 text-primary" />
                                   <div>
                                     <p className="font-medium text-sm">{submission.file_name}</p>
-                                    <p className="text-xs text-zinc-500">
+                                    <p className="text-xs text-muted-foreground">
                                       {submission.file_type} • Uploaded {new Date(submission.submitted_at).toLocaleString()}
                                     </p>
                                   </div>
                                 </div>
                                 <a href={submission.file_url} target="_blank" rel="noopener noreferrer">
-                                  <Button size="sm" variant="outline">
+                                  <Button size="sm" variant="outline" className="border-primary/30 hover:bg-primary/5">
                                     <Download className="w-4 h-4 mr-2" />
                                     Download
                                   </Button>
@@ -319,17 +319,17 @@ export default function ReviewStudentsPage() {
                             ))}
                             {/* Mock submission for demo if real submissions are empty */}
                             {(!submissions[enrollment.id] || submissions[enrollment.id].length === 0) && enrollment.status !== 'active' && (
-                              <div className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800 rounded-lg">
+                              <div className="flex items-center justify-between p-3 glass-card rounded-lg border-primary/10">
                                 <div className="flex items-center gap-3">
-                                  <FileText className="w-4 h-4 text-blue-600" />
+                                  <FileText className="w-4 h-4 text-primary" />
                                   <div>
                                     <p className="font-medium text-sm">homework_solution.pdf</p>
-                                    <p className="text-xs text-zinc-500">
+                                    <p className="text-xs text-muted-foreground">
                                       application/pdf • Uploaded {new Date().toLocaleString()}
                                     </p>
                                   </div>
                                 </div>
-                                <Button size="sm" variant="outline" disabled>
+                                <Button size="sm" variant="outline" disabled className="border-primary/30">
                                   <Download className="w-4 h-4 mr-2" />
                                   Download
                                 </Button>
@@ -340,15 +340,15 @@ export default function ReviewStudentsPage() {
                       )}
 
                       {!enrollment.submission_text && (!submissions[enrollment.id] || submissions[enrollment.id].length === 0) && (
-                        <div className="border rounded-lg p-4 text-center text-zinc-500">
-                          No submissions yet
+                        <div className="glass-card rounded-xl p-4 text-center border-primary/10">
+                          <p className="text-muted-foreground">No submissions yet</p>
                         </div>
                       )}
                     </div>
 
                     {/* Existing Review */}
                     {existingReview && (
-                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="glass-card rounded-xl p-4 border-primary/30">
                         <p className="text-sm font-semibold mb-2">Your Review:</p>
                         <div className="flex items-center gap-1 mb-2">
                           {[1, 2, 3, 4, 5].map((i) => (
@@ -356,8 +356,8 @@ export default function ReviewStudentsPage() {
                               key={i}
                               className={`w-5 h-5 ${
                                 i <= existingReview.stars
-                                  ? 'fill-yellow-500 text-yellow-500'
-                                  : 'text-zinc-300'
+                                  ? 'fill-primary text-primary'
+                                  : 'text-muted-foreground'
                               }`}
                             />
                           ))}
@@ -365,7 +365,7 @@ export default function ReviewStudentsPage() {
                         {existingReview.comment && (
                           <p className="text-sm whitespace-pre-wrap">{existingReview.comment}</p>
                         )}
-                        <p className="text-xs text-zinc-500 mt-2">
+                        <p className="text-xs text-muted-foreground mt-2">
                           Reviewed on: {new Date(existingReview.created_at).toLocaleDateString()}
                         </p>
                       </div>
@@ -389,13 +389,13 @@ export default function ReviewStudentsPage() {
                                     <Star
                                       className={`w-8 h-8 ${
                                         i <= stars
-                                          ? 'fill-yellow-500 text-yellow-500'
-                                          : 'text-zinc-300'
+                                          ? 'fill-primary text-primary'
+                                          : 'text-muted-foreground'
                                       }`}
                                     />
                                   </button>
                                 ))}
-                                <span className="ml-2 font-semibold">{stars}/5</span>
+                                <span className="ml-2 font-semibold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{stars}/5</span>
                               </div>
                             </div>
 
@@ -419,12 +419,14 @@ export default function ReviewStudentsPage() {
                                   setComment('');
                                 }}
                                 disabled={submitting}
+                                className="border-primary/30 hover:bg-primary/5"
                               >
                                 Cancel
                               </Button>
                               <Button
                                 onClick={() => handleSubmitReview(student.id, enrollment.id)}
                                 disabled={submitting}
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
                               >
                                 {submitting ? (
                                   <>
@@ -441,7 +443,7 @@ export default function ReviewStudentsPage() {
                             </div>
                           </div>
                         ) : (
-                          <Button onClick={() => setReviewingStudentId(student.id)}>
+                          <Button onClick={() => setReviewingStudentId(student.id)} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all">
                             <Star className="w-4 h-4 mr-2" />
                             Give Review
                           </Button>

@@ -27,13 +27,13 @@ export function Navigation() {
   };
 
   return (
-    <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+    <nav className="border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-              <BookOpen className="w-6 h-6 text-blue-600" />
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <Link href="/" className="flex items-center gap-2 font-bold text-xl hover:scale-105 transition-transform">
+              <BookOpen className="w-6 h-6 text-primary" />
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 EduChain
               </span>
             </Link>
@@ -47,10 +47,10 @@ export function Navigation() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                      "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
                       isActive
-                        ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-50"
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
                     )}
                   >
                     <Icon className="w-4 h-4" />
@@ -75,7 +75,7 @@ export function Navigation() {
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 border-primary/30 hover:bg-primary/5 hover:border-primary/50 transition-all"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Logout</span>
