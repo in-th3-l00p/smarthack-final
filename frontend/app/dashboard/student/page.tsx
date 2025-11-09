@@ -292,6 +292,42 @@ export default function StudentDashboard() {
                       <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                         {enrollment.homework?.description || 'No description'}
                       </p>
+
+                      {/* Teacher Feedback - Only shown if reviewed */}
+                      {enrollment.status === 'reviewed' && enrollment.review_score !== null && (
+                        <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/20">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-foreground">Teacher Feedback:</p>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < enrollment.review_score!
+                                      ? 'fill-primary text-primary'
+                                      : 'fill-muted text-muted'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-2xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
+                              {enrollment.review_score}/5
+                            </span>
+                            <span className="text-xs text-muted-foreground">stars</span>
+                          </div>
+                          {enrollment.review_comment && (
+                            <div className="mt-2">
+                              <p className="text-xs text-muted-foreground mb-1">Comment:</p>
+                              <p className="text-sm text-foreground italic line-clamp-2">
+                                "{enrollment.review_comment}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex gap-2">
                         <Link href={`/dashboard/student/homework/${enrollment.homework_id}`} className="flex-1">
                           <Button variant="default" size="sm" className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-md hover:shadow-lg transition-all">
