@@ -23,7 +23,7 @@ import {
   updateVote,
 } from '@/lib/supabase/queries';
 import type { Homework, EnrollmentWithDetails, Submission, TaskResource } from '@/lib/types/database';
-import { Upload, FileText, CheckCircle, MessageCircle, Loader2, ArrowLeft, Download, X, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Upload, FileText, CheckCircle, MessageCircle, Loader2, ArrowLeft, Download, X, ThumbsUp, ThumbsDown, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
