@@ -1,3 +1,6 @@
 [submodule "web3/lib/forge-std"]
 	path = web3/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "frontend/educhain-web3"]
+	path = frontend/educhain-web3
+	url = https://github.com/in-th3-l00p/educhain-web3.git
