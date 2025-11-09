@@ -546,9 +546,7 @@ export async function getSubmissions(filters?: {
       .from('submissions')
       .select(`
         *,
-        student:profiles!submissions_student_id_fkey(*),
-        homework:homeworks(*),
-        enrollment:enrollments(*)
+        student:profiles(*)
       `)
       .order('submitted_at', { ascending: false });
 
@@ -573,7 +571,15 @@ export async function getSubmissions(filters?: {
       return [];
     }
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error in getSubmissions:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      throw error;
+    }
     return data as SubmissionWithDetails[];
   } catch (error) {
     console.error('Error fetching submissions:', error);
