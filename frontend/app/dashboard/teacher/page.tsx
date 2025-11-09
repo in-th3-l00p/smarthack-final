@@ -23,12 +23,25 @@ export default function TeacherDashboard() {
   const [unreviewedSubmissions, setUnreviewedSubmissions] = useState<Submission[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
+
+  // Wait for wallet to reconnect on page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialCheckDone(true);
+    }, 3000); // Wait 3 seconds for wallet reconnection
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    if (!isConnected) {
+    // Only redirect if we've waited and still not connected
+    if (initialCheckDone && !isConnected) {
       router.push('/');
       return;
     }
+
+    if (!isConnected) return;
 
     async function loadData() {
       if (!address) return;
@@ -92,7 +105,7 @@ export default function TeacherDashboard() {
     }
 
     loadData();
-  }, [address, isConnected, router]);
+  }, [address, isConnected, router, initialCheckDone]);
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;

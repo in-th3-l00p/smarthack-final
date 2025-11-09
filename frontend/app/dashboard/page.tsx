@@ -21,10 +21,10 @@ export default function DashboardPage() {
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
   useEffect(() => {
-    // Wait a bit for wallet to connect before redirecting
+    // Wait longer for wallet to reconnect on page load
     const timer = setTimeout(() => {
       setInitialCheckDone(true);
-    }, 1000);
+    }, 3000); // Increased to 3 seconds to allow wallet reconnection
 
     return () => clearTimeout(timer);
   }, []);

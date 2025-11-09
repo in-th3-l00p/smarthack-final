@@ -7,7 +7,15 @@ import { wagmiConfig } from '@/lib/wagmi';
 import React from 'react';
 import merge from 'lodash.merge';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    },
+  },
+});
 
 const customLightTheme = merge(lightTheme(), {
   colors: {
@@ -136,9 +144,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={wagmiConfig} reconnectOnMount={true}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={isDark ? customDarkTheme : customLightTheme}>
+        <RainbowKitProvider
+          theme={isDark ? customDarkTheme : customLightTheme}
+          modalSize="compact"
+        >
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>

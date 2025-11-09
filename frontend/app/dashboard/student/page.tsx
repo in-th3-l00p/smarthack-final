@@ -40,12 +40,25 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [canBecomeMentor, setCanBecomeMentor] = useState(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
+
+  // Wait for wallet to reconnect on page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialCheckDone(true);
+    }, 3000); // Wait 3 seconds for wallet reconnection
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    if (!isConnected) {
+    // Only redirect if we've waited and still not connected
+    if (initialCheckDone && !isConnected) {
       router.push('/');
       return;
     }
+
+    if (!isConnected) return;
 
     async function loadData() {
       if (!address) return;
@@ -95,7 +108,7 @@ export default function StudentDashboard() {
     }
 
     loadData();
-  }, [address, isConnected, router]);
+  }, [address, isConnected, router, initialCheckDone]);
 
   async function handleEnroll(homeworkId: string) {
     if (!profile) return;
@@ -250,8 +263,7 @@ export default function StudentDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {myEnrollments.map((enrollment) => {
                 return (
-                  <div key={enrollment.id} className="liquid-glass rounded-3xl p-6 hover-lift group">
-                    <Card>
+                  <Card key={enrollment.id} className="liquid-glass rounded-3xl overflow-visible hover-lift group border-0">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
@@ -299,7 +311,6 @@ export default function StudentDashboard() {
                       </div>
                     </CardContent>
                 </Card>
-                </div>
                 );
               })}
             </div>
@@ -325,11 +336,10 @@ export default function StudentDashboard() {
                 const slotsLeft = homework.max_students - homework.current_students;
 
                 return (
-                  <div
-                    key={homework.id}
-                    className={isEnrolled ? 'liquid-glass rounded-3xl p-6 hover-lift ring-2 ring-primary/50 shadow-lg shadow-primary/20' : 'liquid-glass rounded-3xl p-6 hover-lift hover:ring-2 hover:ring-primary/30 transition-all'}
-                  >
-                    <Card>
+                    <Card
+                      key={homework.id}
+                      className={isEnrolled ? 'liquid-glass rounded-3xl overflow-visible hover-lift ring-2 ring-primary/50 shadow-lg shadow-primary/20 border-0' : 'liquid-glass rounded-3xl overflow-visible hover-lift hover:ring-2 hover:ring-primary/30 transition-all border-0'}
+                    >
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-lg">{homework.title}</CardTitle>
@@ -385,7 +395,6 @@ export default function StudentDashboard() {
                       </div>
                     </CardContent>
                   </Card>
-                  </div>
                 );
               })}
             </div>
