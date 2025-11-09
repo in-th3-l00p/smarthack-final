@@ -165,13 +165,15 @@ export default function CreateHomeworkPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 gradient-bg min-h-screen">
       <div className="max-w-2xl mx-auto">
-        <Card>
+        <Card className="glass-card rounded-2xl border-primary/10 animate-fade-in">
           <CardHeader>
-            <div className="flex items-center gap-2 mb-2">
-              <BookOpen className="w-6 h-6 text-blue-600" />
-              <CardTitle className="text-3xl">Create New Task</CardTitle>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center ring-1 ring-primary/20">
+                <BookOpen className="w-6 h-6 text-primary" />
+              </div>
+              <CardTitle className="text-3xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Create New Task</CardTitle>
             </div>
             <CardDescription>
               Publish a task for students to enroll and ask questions
@@ -180,25 +182,27 @@ export default function CreateHomeworkPage() {
 
           <CardContent>
             {/* Token Balance Display */}
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="mb-6 p-4 glass-card rounded-xl border-primary/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-blue-600" />
+                  <Coins className="w-5 h-5 text-primary" />
                   <span className="font-semibold">Your Token Balance:</span>
                 </div>
-                <span className="text-2xl font-bold text-blue-600">{profile.token_balance}</span>
+                <span className="text-2xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.token_balance}</span>
               </div>
-              <p className="text-sm text-blue-900 dark:text-blue-100 mt-2">
+              <p className="text-sm text-muted-foreground mt-2">
                 Creating a task costs <strong>1 token</strong>
               </p>
             </div>
 
             {/* Insufficient Tokens Warning */}
             {profile.token_balance < 1 && (
-              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                  <p className="text-red-900 dark:text-red-100">
+              <div className="mb-6 p-4 glass-card rounded-xl border-primary/20 animate-slide-in">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center ring-1 ring-primary/20">
+                    <AlertCircle className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-foreground">
                     <strong>Insufficient tokens!</strong> You need at least 1 token to create a task.
                   </p>
                 </div>
@@ -281,18 +285,18 @@ export default function CreateHomeworkPage() {
 
                   {/* Uploaded Files List */}
                   {uploadedFiles.length > 0 && (
-                    <div className="border rounded-lg p-3 space-y-2">
+                    <div className="glass-card rounded-xl border-primary/10 p-3 space-y-2">
                       <p className="text-sm font-semibold mb-2">Files to upload ({uploadedFiles.length}):</p>
                       {uploadedFiles.map((file, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-2 bg-zinc-50 dark:bg-zinc-900 rounded-lg"
+                          className="flex items-center justify-between p-2 glass-card rounded-lg border-primary/10"
                         >
                           <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-blue-600" />
+                            <FileText className="w-4 h-4 text-primary" />
                             <div>
                               <p className="text-sm font-medium">{file.name}</p>
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-muted-foreground">
                                 {(file.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             </div>
@@ -316,7 +320,7 @@ export default function CreateHomeworkPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-primary/30 hover:bg-primary/5"
                   onClick={() => router.back()}
                 >
                   Cancel
@@ -324,7 +328,7 @@ export default function CreateHomeworkPage() {
                 <Button
                   type="submit"
                   disabled={loading || profile.token_balance < 1}
-                  className="flex-1"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
                   size="lg"
                 >
                   {loading ? (

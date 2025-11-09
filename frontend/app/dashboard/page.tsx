@@ -78,8 +78,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] gradient-bg">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -90,8 +90,8 @@ export default function DashboardPage() {
 
   // Show loading while redirecting
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] gradient-bg">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
     </div>
   );
 }

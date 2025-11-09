@@ -103,16 +103,16 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-8">
+    <div className="container mx-auto py-8 px-4 gradient-bg min-h-screen">
+      <div className="flex items-center justify-between mb-8 animate-fade-in">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Teacher Dashboard</h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">Teacher Dashboard</h1>
+          <p className="text-muted-foreground">
             Manage tasks, answer questions, and review students
           </p>
         </div>
         <Link href="/dashboard/teacher/create-homework">
-          <Button size="lg" disabled={profile.token_balance < 1}>
+          <Button size="lg" disabled={profile.token_balance < 1} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all">
             <Plus className="w-5 h-5 mr-2" />
             Create Task
           </Button>
@@ -121,11 +121,13 @@ export default function TeacherDashboard() {
 
       {/* Token Balance Warning */}
       {profile.token_balance < 1 && (
-        <Card className="mb-6 border-orange-500 bg-orange-50 dark:bg-orange-900/20">
+        <Card className="mb-6 glass-card rounded-2xl border-primary/20 animate-slide-in">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <Coins className="w-5 h-5 text-orange-600" />
-              <p className="text-orange-900 dark:text-orange-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center ring-1 ring-primary/20">
+                <Coins className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-foreground">
                 <strong>Insufficient tokens!</strong> You need at least 1 token to create a task.
                 Each task costs 1 token.
               </p>
@@ -135,66 +137,66 @@ export default function TeacherDashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Token Balance</CardTitle>
-            <Coins className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{profile.token_balance}</div>
-            <p className="text-xs text-zinc-500">tokens available</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <Card className="glass-card rounded-2xl hover-lift border-primary/10 animate-fade-in">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-sm font-medium">Token Balance</CardTitle>
+              <Coins className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.token_balance}</div>
+            <p className="text-xs text-muted-foreground mt-1">tokens available</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
-            <BookOpen className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{homeworks.length}</div>
-            <p className="text-xs text-zinc-500">
+        <Card className="glass-card rounded-2xl hover-lift border-primary/10 animate-fade-in" style={{animationDelay: '100ms'}}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{homeworks.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               {homeworks.filter(h => h.is_active).length} active
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
-            <p className="text-xs text-zinc-500">enrolled across all tasks</p>
+        <Card className="glass-card rounded-2xl hover-lift border-primary/10 animate-fade-in" style={{animationDelay: '200ms'}}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{totalStudents}</div>
+            <p className="text-xs text-muted-foreground mt-1">enrolled across all tasks</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unanswered Questions</CardTitle>
-            <HelpCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{unansweredQuestions.length}</div>
-            <p className="text-xs text-zinc-500">
-              <Link href="/dashboard/teacher/questions" className="text-blue-600 hover:underline">
+        <Card className="glass-card rounded-2xl hover-lift border-primary/10 animate-fade-in" style={{animationDelay: '300ms'}}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-sm font-medium">Unanswered Questions</CardTitle>
+              <HelpCircle className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{unansweredQuestions.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              <Link href="/dashboard/teacher/questions" className="text-primary hover:underline">
                 View all →
               </Link>
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unreviewed Work</CardTitle>
-            <FileText className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{unreviewedSubmissions.length}</div>
-            <p className="text-xs text-zinc-500">
-              <Link href="/dashboard/teacher/submissions" className="text-blue-600 hover:underline">
+        <Card className="glass-card rounded-2xl hover-lift border-primary/10 animate-fade-in" style={{animationDelay: '400ms'}}>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-sm font-medium">Unreviewed Work</CardTitle>
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{unreviewedSubmissions.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              <Link href="/dashboard/teacher/submissions" className="text-primary hover:underline">
                 View all →
               </Link>
             </p>
@@ -203,30 +205,35 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Your Rating & Votes */}
-      <Card className="mb-8">
+      <Card className="mb-8 glass-card rounded-2xl hover-lift border-primary/10">
         <CardHeader>
-          <CardTitle>Your Reputation</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center ring-1 ring-primary/20">
+              <TrendingUp className="w-5 h-5 text-primary" />
+            </div>
+            Your Reputation
+          </CardTitle>
           <CardDescription>Based on student reviews and community votes</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 border rounded-lg">
-              <TrendingUp className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold">{profile.rating.toFixed(1)}/5</div>
-              <div className="text-sm text-zinc-600">Average Rating</div>
-              <div className="text-xs text-zinc-500 mt-1">
+            <div className="text-center p-6 glass-card rounded-xl border-primary/10">
+              <TrendingUp className="w-8 h-8 text-primary mx-auto mb-2" />
+              <div className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.rating.toFixed(1)}/5</div>
+              <div className="text-sm text-foreground mt-2">Average Rating</div>
+              <div className="text-xs text-muted-foreground mt-1">
                 {profile.total_reviews} {profile.total_reviews === 1 ? 'review' : 'reviews'}
               </div>
             </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{profile.upvotes}</div>
-              <div className="text-sm text-zinc-600">Upvotes</div>
-              <div className="text-xs text-zinc-500 mt-1">from DAO voting</div>
+            <div className="text-center p-6 glass-card rounded-xl border-primary/10">
+              <div className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.upvotes}</div>
+              <div className="text-sm text-foreground mt-2">Upvotes</div>
+              <div className="text-xs text-muted-foreground mt-1">from DAO voting</div>
             </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-red-600">{profile.downvotes}</div>
-              <div className="text-sm text-zinc-600">Downvotes</div>
-              <div className="text-xs text-zinc-500 mt-1">from DAO voting</div>
+            <div className="text-center p-6 glass-card rounded-xl border-primary/10">
+              <div className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.downvotes}</div>
+              <div className="text-sm text-foreground mt-2">Downvotes</div>
+              <div className="text-xs text-muted-foreground mt-1">from DAO voting</div>
             </div>
           </div>
         </CardContent>
@@ -236,12 +243,12 @@ export default function TeacherDashboard() {
       <div>
         <h2 className="text-2xl font-bold mb-4">Your Tasks</h2>
         {homeworks.length === 0 ? (
-          <Card>
+          <Card className="glass-card rounded-2xl border-primary/10">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <BookOpen className="w-12 h-12 text-zinc-400 mb-4" />
-              <p className="text-zinc-600 mb-4">You haven't created any tasks yet</p>
+              <BookOpen className="w-12 h-12 text-primary mb-4" />
+              <p className="text-muted-foreground mb-4">You haven't created any tasks yet</p>
               <Link href="/dashboard/teacher/create-homework">
-                <Button disabled={profile.token_balance < 1}>
+                <Button disabled={profile.token_balance < 1} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all">
                   Create Your First Task
                 </Button>
               </Link>
@@ -250,11 +257,11 @@ export default function TeacherDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {homeworks.map((homework) => (
-              <Card key={homework.id} className="hover:border-blue-500 transition-colors">
+              <Card key={homework.id} className="glass-card rounded-2xl hover-lift border-primary/10 hover:border-primary/30 transition-all">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-lg">{homework.title}</CardTitle>
-                    <Badge variant={homework.is_active ? 'default' : 'secondary'}>
+                    <Badge variant={homework.is_active ? 'default' : 'secondary'} className={homework.is_active ? 'bg-primary' : ''}>
                       {homework.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
@@ -265,19 +272,19 @@ export default function TeacherDashboard() {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-zinc-600">Students enrolled:</span>
+                      <span className="text-muted-foreground">Students enrolled:</span>
                       <span className="font-semibold">
                         {homework.current_students} / {homework.max_students}
                       </span>
                     </div>
                     <div className="flex gap-2 mt-4">
                       <Link href={`/dashboard/teacher/homework/${homework.id}`} className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full">
+                        <Button variant="outline" size="sm" className="w-full border-primary/30 hover:bg-primary/5">
                           View Details
                         </Button>
                       </Link>
                       <Link href={`/dashboard/teacher/homework/${homework.id}/review`} className="flex-1">
-                        <Button variant="default" size="sm" className="w-full">
+                        <Button variant="default" size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                           Review Students
                         </Button>
                       </Link>

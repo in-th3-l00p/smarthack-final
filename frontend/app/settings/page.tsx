@@ -70,15 +70,15 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen gradient-bg">Loading...</div>;
   }
 
   if (!profile) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card>
+      <div className="container mx-auto py-8 px-4 gradient-bg min-h-screen">
+        <Card className="glass-card rounded-2xl border-primary/10">
           <CardContent className="py-12 text-center">
-            <p className="text-zinc-600">Please connect your wallet to access settings.</p>
+            <p className="text-muted-foreground">Please connect your wallet to access settings.</p>
           </CardContent>
         </Card>
       </div>
@@ -86,23 +86,27 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Settings</h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
+    <div className="container mx-auto py-8 px-4 max-w-4xl gradient-bg min-h-screen">
+      <div className="mb-8 animate-fade-in">
+        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">Settings</h1>
+        <p className="text-muted-foreground">
           Manage your profile, privacy settings, and understand how your data is used
         </p>
       </div>
 
       <div className="space-y-6">
         {/* Profile Settings */}
-        <Card>
+        <Card className="glass-card rounded-2xl border-primary/10 hover-lift animate-slide-in">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <User className="w-6 h-6 text-blue-600" />
-              <CardTitle>Profile Settings</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center ring-1 ring-primary/20">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Profile Settings</CardTitle>
+                <CardDescription>Update your personal information and preferences</CardDescription>
+              </div>
             </div>
-            <CardDescription>Update your personal information and preferences</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -112,7 +116,7 @@ export default function SettingsPage() {
                 type="text"
                 value={profile.wallet_address}
                 disabled
-                className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-500"
+                className="w-full px-4 py-2 rounded-lg border border-border bg-muted text-muted-foreground"
               />
             </div>
 
@@ -123,7 +127,7 @@ export default function SettingsPage() {
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 placeholder="Enter your username"
-                className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -132,7 +136,7 @@ export default function SettingsPage() {
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-                className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="student">Student</option>
                 <option value="teacher">Teacher</option>
@@ -140,11 +144,12 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all">
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
               <Button
                 variant="outline"
+                className="border-primary/30 hover:bg-primary/5"
                 onClick={() => {
                   setFormData({
                     username: profile.username || '',
@@ -159,37 +164,41 @@ export default function SettingsPage() {
         </Card>
 
         {/* Stats Overview */}
-        <Card>
+        <Card className="glass-card rounded-2xl border-primary/10 hover-lift animate-slide-in" style={{animationDelay: '100ms'}}>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <SettingsIcon className="w-6 h-6 text-green-600" />
-              <CardTitle>Your Statistics</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-secondary/20 to-primary/20 flex items-center justify-center ring-1 ring-secondary/20">
+                <SettingsIcon className="w-5 h-5 text-secondary" />
+              </div>
+              <div>
+                <CardTitle>Your Statistics</CardTitle>
+                <CardDescription>Overview of your activity and reputation</CardDescription>
+              </div>
             </div>
-            <CardDescription>Overview of your activity and reputation</CardDescription>
           </CardHeader>
 
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{profile.rating.toFixed(1)}</div>
-                <div className="text-sm text-zinc-600">Rating</div>
+              <div className="text-center p-4 glass-card rounded-xl border-primary/10">
+                <div className="text-2xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.rating.toFixed(1)}</div>
+                <div className="text-sm text-muted-foreground">Rating</div>
               </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{profile.completed_count}</div>
-                <div className="text-sm text-zinc-600">Completed</div>
+              <div className="text-center p-4 glass-card rounded-xl border-primary/10">
+                <div className="text-2xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.completed_count}</div>
+                <div className="text-sm text-muted-foreground">Completed</div>
               </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{profile.total_reviews}</div>
-                <div className="text-sm text-zinc-600">Total Reviews</div>
+              <div className="text-center p-4 glass-card rounded-xl border-primary/10">
+                <div className="text-2xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.total_reviews}</div>
+                <div className="text-sm text-muted-foreground">Total Reviews</div>
               </div>
-              <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">{profile.token_balance}</div>
-                <div className="text-sm text-zinc-600">Tokens</div>
+              <div className="text-center p-4 glass-card rounded-xl border-primary/10">
+                <div className="text-2xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">{profile.token_balance}</div>
+                <div className="text-sm text-muted-foreground">Tokens</div>
               </div>
             </div>
 
-            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-sm text-zinc-700 dark:text-zinc-300">
+            <div className="mt-4 p-4 glass-card rounded-xl border-primary/20">
+              <p className="text-sm">
                 <strong>How your rating grows:</strong> Your rating increases through active participation,
                 receiving positive reviews, and helping other students. Earn tokens by answering questions
                 and completing tasks.
