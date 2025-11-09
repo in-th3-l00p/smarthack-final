@@ -774,9 +774,72 @@ export default function StudentHomeworkPage() {
           </CardContent>
         </Card>
 
+        {/* Teacher's Review/Feedback - Show if task has been reviewed */}
+        {isReviewed && enrollment.review_score !== null && (
+          <Card className="border-primary mt-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-primary" />
+                Teacher's Review
+              </CardTitle>
+              <CardDescription>
+                Feedback from your teacher on this assignment
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Stars Display */}
+                <div>
+                  <p className="text-sm font-semibold mb-3">Rating:</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-8 h-8 ${
+                            star <= enrollment.review_score!
+                              ? 'fill-primary text-primary'
+                              : 'fill-muted text-muted'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent ml-2">
+                      {enrollment.review_score}/5
+                    </span>
+                  </div>
+                </div>
+
+                {/* Teacher's Comment */}
+                {enrollment.review_comment && (
+                  <div>
+                    <p className="text-sm font-semibold mb-2">Teacher's Comment:</p>
+                    <div className="p-4 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-xl border border-primary/20">
+                      <p className="text-base text-foreground whitespace-pre-wrap italic">
+                        "{enrollment.review_comment}"
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tokens Earned Info */}
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                  <p className="text-sm text-green-900 dark:text-green-100">
+                    <strong>Tokens Earned:</strong> {
+                      enrollment.review_score === 5 ? '50 tokens' :
+                      enrollment.review_score === 4 ? '30 tokens' :
+                      enrollment.review_score === 3 ? '10 tokens' : '0 tokens'
+                    } for this assignment
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Rate Your Teacher */}
         {isReviewed && !hasReviewedTeacher && homework?.teacher && (
-          <Card className="border-purple-500">
+          <Card className="border-purple-500 mt-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-purple-600" />
