@@ -4,7 +4,10 @@
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
       "Bash(timeout 30 npm run dev:*)",
-      "Bash(npx supabase db push)"
+      "Bash(npx supabase db push)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 15 npm run dev:*)"
     ],
     "deny": [],
     "ask": []
